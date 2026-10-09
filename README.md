@@ -8,7 +8,7 @@ Live site: https://audreylolaarts.github.io/DVM_Zooplankton/
 - `dvm_lake_map_slider.html` (Data Sliders) lets you set the light and temperature yourself.
 - `dvm_lake_live_data.html` (Live Buoy Data) is driven by the Trout Lake buoy.
 - `dvm_lake_timeline.html` (Lake Through Time) plays the Trout Lake record from 1981 to 2025, one week per day-night cycle, with ice cover on the real dates. Its data are in `timeline_data.js`.
-- `dvm_lake_sound.html` (Lake in Sound) plays the same timeline on piano. Each note is one Daphnia: depth sets the pitch, size sets the volume, and population sets how often notes play. Notes come from C major 7 by day and C minor 7 by night. The piano samples are in `piano/`.
+- `dvm_lake_sound.html` (Lake in Sound) plays the same timeline on piano. Each note is one Daphnia: depth sets the pitch, size sets the volume, and population sets how often notes play. Notes come from C major 13 by day and F major 13 by night. The piano samples are in `piano/`.
 
 ## How the live data works
 
