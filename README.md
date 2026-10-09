@@ -1,0 +1,24 @@
+# Zooplankton Diel Vertical Migration
+
+Animated drawings of *Daphnia* diel vertical migration in Trout Lake, Wisconsin, made during the 2026 Drawing Water residency at Trout Lake Station.
+
+Live site: https://audreylolaarts.github.io/DVM_Zooplankton/
+
+- `index.html` is the landing page.
+- `dvm_lake_map_slider.html` (Data Sliders) lets you set the light and temperature yourself.
+- `dvm_lake_live_data.html` (Live Buoy Data) is driven by the Trout Lake buoy.
+
+## How the live data works
+
+The UW-Madison Center for Limnology buoy feed only allows browser pages on `uwcfl.github.io` to read it. To get around that, `.github/workflows/trout-buoy.yml` runs about every 10 minutes:
+
+1. It runs `scripts/fetch_trout_buoy.py`, which saves the newest buoy reading as `trout_latest.json`.
+2. It publishes the site to GitHub Pages.
+
+The live page reads `trout_latest.json`. The Pages source must be set to **GitHub Actions** (Settings → Pages).
+
+## Sources
+
+- Model: DaphniaDVM by Bennett McAfee, ported to JavaScript with permission.
+- Live data: [Trout Lake Buoy Live Data](https://uwcfl.github.io/buoy-viewer/trout.html), UW-Madison Center for Limnology. These data are not quality controlled.
+- Zooplankton: Magnuson, J., S. Carpenter, and E. Stanley. North Temperate Lakes LTER: Zooplankton – Trout Lake Area 1982 – current. Environmental Data Initiative. doi:10.6073/pasta/aba16e9867e8f7b41b08dae0e92d6a98

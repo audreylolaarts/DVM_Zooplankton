@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>DVM Live Buoy Data</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #06101c; }
+  input[type=range] { accent-color: #bfe3ff; }
+  .back { position: fixed; top: 14px; left: 16px; z-index: 2; font: 13px system-ui, sans-serif;
+          color: rgba(255,255,255,.85); text-decoration: none; text-shadow: 0 1px 3px rgba(0,16,32,.7); }
+  .back:hover { color: #fff; text-decoration: underline; }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← All drawings</a>
+<script>
+
+//main equation:
+//F(x,t,T) = (1-ßi)[λi F(xi', t+1, T) + (1-λi)F(xi'', t+1, T)]
+
+//example dataset (Trout Lake, May 1992)
+const trmay92_df = [
+  { depth: 0,  temp: 8.9, chl: 10.6,  predators: 6.31, food_prob: 0.5 },
+  { depth: 2,  temp: 8.8, chl: 11,    predators: 1.5,  food_prob: 0.5 },
+  { depth: 4,  temp: 8.8, chl: 12.1,  predators: 0.9,  food_prob: 0.5 },
+  { depth: 6,  temp: 8.7, chl: 12.4,  predators: 3.61, food_prob: 0.5 },
+  { depth: 8,  temp: 8.2, chl: 12.8,  predators: 8.57, food_prob: 0.5 },
+  { depth: 10, temp: 7.9, chl: 11.5,  predators: 13.52, food_prob: 0.5 },
+  { depth: 12, temp: 6.7, chl: 9.8,   predators: 25.7, food_prob: 0.5 },
+  { depth: 14, temp: 6.6, chl: 10.25, predators: 22.1, food_prob: 0.5 },
+  { depth: 16, temp: 6.6, chl: 10.6,  predators: 21.2, food_prob: 0.5 },
+  { depth: 18, temp: 6.4, chl: 10.6,  predators: 5.4,  food_prob: 0.5 },
+  { depth: 20, temp: 6,   chl: 10.7,  predators: 1.4,  food_prob: 0.5 },
+  { depth: 22, temp: 5.6, chl: 9,     predators: 1.4,  food_prob: 0.5 },
+  { depth: 24, temp: 5.3, chl: 8.3,   predators: 1.8,  food_prob: 0.5 },
+  { depth: 26, temp: 5.2, chl: 7.5,   predators: 3,    food_prob: 0.5 },
+  { depth: 28, temp: 5.2, chl: 6.9,   predators: 4.5,  food_prob: 0.5 },
+  { depth: 30, temp: 5.2, chl: 6,     predators: 0,    food_prob: 0.5 },
+  { depth: 32, temp: 5.1, chl: 5.5,   predators: 0,    food_prob: 0.5 },
+];
+
+function luxToPPFD(lux, calibrationFactor = 0.0185) {
+  return lux * calibrationFactor;
+}
+
+const n_timesteps = 12;
+const critical = 5;
+const capacity = 60;
+const k = 0.48;
+const light_day = luxToPPFD(105253);
+const light_night = 0.15;
+
+//setting the boundaries for size of Daphnia or flagging starvation
+function chop(formula, lower, upper){
+  let value;
+  if (formula>upper){
+    value=upper;
+  }
+  if (formula>=lower && formula<=upper){
+    value=formula;
+  }
+  if (formula<lower){
+    value=0;
+  }
+  return value;
+}
+
+//1 if Daphnia is alive, 0 if not
+function critCompare(value, critical) {
+  if (value>critical){
+    return 1;
+  } else {return 0};
+}
+
+//initialize fitness tables
+
+//create an empty array for F0, filled with the number of sizes classes between x_crit and x_max in intervals of 5
+function initFZero(x_crit, x_max){
+  const n = (x_max-x_crit)/5+1;
+  let F0= new Array(n).fill(0);
+  return F0;
+}
+
+//starting F1 table
+//create a table object F1 which matches depths with an aray for each size class. The array is filled with 1 and 0 indicating whether Daphnia at that size class at that depth is alive or not.
+function initFOne (x_crit, x_max, patchDepths){
+  const sizes = [];
+  for (let x=x_crit; x<=x_max; x+=5) sizes.push(x);
+  const F1={};
+  for (const depth of patchDepths){
+    F1[depth]=sizes.map(x=> critCompare(x,x_crit));
+  }
+  return F1;
+}
+
+//compute_v function
+//alpha=baseline metabolic cost
+//upsilon or Y=energetic value of food it ate
+//lambda=probability of finding food
+//beta=predation risk in a given patch
+//xp1= size of Daphnia in previous timestep after ingesting food in a given patch and expending energy
+//xp2=size of Daphnia in same previous timestep but with the probability of not finding food
+
+function compute_v(x, alpha, beta, lambda, upsilon, x_crit, x_max, F1, depth){
+  const idx = (x - x_crit)/5 //create index number to navigate f1
+
+  const xfit = F1[depth][idx];
+  //xfit used to locate fitness value at depth and index in F1
+
+//calculating x' and x''.
+  //x' is the outcome if food is found, x'' is the outcome if food is not found.
+  const xp1 = chop(x-alpha+upsilon, x_crit, x_max);
+  const xp2 = chop (x-alpha, x_crit, x_max);
+
+  //retrieve info about x at depth from F1
+  const idxUp=Math.min(idx+1, (x_max-x_crit)/5);
+  const idxDown=Math.max(idx-1,0);
+
+  //fitnesses at indexes higher and lower than x
+  let fitxp1plus;
+  if (xp1>=x){
+    fitxp1plus= F1[depth][idxUp];
+  } else {
+    fitxp1plus = F1[depth][idxDown];
+  }
+
+  const fitxp2plus= F1[depth][idxDown];
+
+  //interpolate fitness values
+
+  //calculate a fraction representing how far xp1 is from x
+  const prop_xp1= (xp1-x)/5;
+
+  //estimate fitness at xp1
+  const fitxp1 = ((fitxp1plus-xfit)* prop_xp1)+xfit;
+
+  //calculate a fraction representing how far xp2 is from x
+  const prop_xp2 = (xp2-x)/5;
+
+  //estimate fitness at xp2
+  const fitxp2 = ((fitxp2plus-xfit)* prop_xp2)+xfit;
+
+  //fitness calculation
+
+  //predation risk
+  const surv_prob=1-beta;
+
+  //average two possible futures (found food vs didn't, weighted by how likely each one is)
+  const starv_prob=(lambda*fitxp1)+((1-lambda)*fitxp2);
+
+  //predation risk * food probability
+  const v = surv_prob * starv_prob;
+
+  return v;
+}
+
+//get_patches function
+
+function get_patches(data, depth, food_prob, fish_abun, chl, temp, k, lsurf, x){
+
+  //Body length (mm) from weight (μg) - allometric power-law relationship
+  const lengthx=Math.pow(10, (Math.log10(x)-Math.log10(10.674))/2.093);
+
+  //create object organized by patch depth
+  const grouped={};
+  for (const row of data){
+    //round depths to nearest 2m bin and add to object
+    const patch = 2 * Math.round(row[depth]/2);
+    (grouped[patch] ??=[]).push(row);
+  }
+
+    const data_sum={};
+    for (const patch of Object.keys(grouped)){
+      //create an array of all the environmental data in each row
+      const rows = grouped[patch];
+        //starting from 0, go through every row r in rows, and each time, add r[key] to the running total sum.
+      const avg = key => rows.reduce((sum,r) => sum + r[key],0)/rows.length;
+      data_sum[patch]={
+        food_prob: avg(food_prob),
+        predn: avg(fish_abun),
+        chl: avg(chl),
+        temp: avg(temp),
+      };
+    }
+
+//define constants from pre-existing data
+      const RDSAT = 0.16504;
+      const RDHALF = 0.035;
+      const SSPEED = 0.15;
+      const HANDLE = 1.8;
+      const PDENS = 10000;
+      const ASSIM = 0.6;
+
+    const data_out = [];
+      for (const patch of Object.keys(data_sum)){
+        //pull properties from object and assign each its own variable
+        const fp = data_sum[patch].food_prob;
+        const predn = data_sum[patch].predn;
+        const chlVal = data_sum[patch].chl;
+        const tempVal = data_sum[patch].temp;
+
+        //calculations
+        const Alpha=0.007 * Math.pow(x, 0.81) * (Math.exp(0.06931 * tempVal)/2);
+        const Light = lsurf * Math.exp(-k*2*patch);
+        const React = RDSAT * lengthx * (Light / (RDHALF + Light));
+        const Denom1 = Math.PI * SSPEED * PDENS * HANDLE * Math.pow(React, 2) + 1e-100;
+        const Frate = (1/ HANDLE) / (1+ (1 / Denom1));
+        const Consum = Frate * (predn / 1000) * 108000;
+        const Beta = Consum / PDENS;
+        const Lambda = fp;
+        const ups_coeff = (chlVal * (0.029 * tempVal - 0.028)) / (0.41 * (0.3 * chlVal + 0.42));
+        const Upsilon = ASSIM * (ups_coeff * Math.pow(lengthx / 2, 2.43 - 0.044 * tempVal)) / 2;
+
+        data_out.push({ patch: Number(patch), Alpha, Light, React, Denom1, Frate, Consum, Beta, Lambda, ups_coeff, Upsilon });
+}
+  return data_out;
+}
+
+//max_v function
+//picks winning patch per size and records it
+
+function max_v(x_crit, x_max, F0, D, F1, data, depth, food_prob, fish_abun, chl, temp, k, lsurf){
+  //create copy of F1 with built-in JS structuredClone
+  const F1_ref=structuredClone(F1);
+
+  for (let x=x_crit; x<=x_max; x+=5){
+    let u=(x-x_crit)/5;
+    let vm=0; //max fitness found so far, for this size
+    const patches=get_patches(data, depth, food_prob, fish_abun, chl, temp, k, lsurf, x);
+    for (const i of patches){
+      let v=compute_v(x, i.Alpha, i.Beta, i.Lambda, i.Upsilon, x_crit, x_max, F1, i.patch);
+      F1_ref[i.patch][u]=v;
+      if (v>vm){
+        vm=v;
+        F0[u]=v;
+        D[u]=i.patch;
+      }
+    }
+  }
+  return {
+    F1: F1_ref, F0, D
+  };
+}
+
+//dvmsimulation function
+//repeats across every timestep, walking backward from terminal condition
+
+function dvmsimulation(n_timesteps, critical, capacity, data, depth, food_prob, fish_abun, chl, temp, k, lsurf){
+
+  //Step 1- initialize fitness arrays
+
+  const patchDepths = [...new Set(data.map(row=>2*Math.round(row[depth]/2)))];
+  let F0=initFZero(critical, capacity);
+  let D= initFZero(critical, capacity);
+  let F1=initFOne(critical, capacity, patchDepths);
+
+  const complete_output=[];
+
+  //Step 2 - Iterate over timesteps, getting max fitness values
+
+  for (let t=1; t<=n_timesteps; t++){
+    ({F1, F0, D}=max_v(critical, capacity, F0, D, F1, data, depth, food_prob, fish_abun, chl, temp, k, lsurf));
+
+    for (let x=critical; x<=capacity; x+=5){
+
+      const u=(x-critical)/5;
+
+      complete_output.push({Timestep: t, Size: x, Fitness: F0[u], Depth: D[u]});
+    }
+  }
+  return complete_output;
+}
+
+// ============================================================
+// p5.js sketch - full-window animated lake map, driven by the live
+// Trout Lake buoy (temperature profile + light), polled every 2 minutes
+// ============================================================
+
+// Number of dots drawn. This is a visual sample, not a literal head count:
+// a real lake holds billions of Daphnia (densities are reported per liter
+// in the NTL-LTER zooplankton dataset - see index.html for the citation).
+// 600 dots splits evenly into 50 per size class (12 classes, 5-60 μg).
+const populationSize = 600;
+
+const minCircleDiameter = 2.5; // size at `critical` (smallest Daphnia)
+const maxCircleDiameter = 11;  // size at `capacity` (largest Daphnia)
+
+// ---- visual style --------------------------------------------------
+// Sky color is keyed to the light reading on a log scale (light spans
+// ~4 orders of magnitude, so a linear scale would leave all the dusk/
+// dawn colors crammed into the bottom of the range). Each stop is
+// [lightFrac, topColor, horizonColor].
+const skyStops = [
+  [0.00, [4, 8, 24],     [16, 26, 58]],     // night
+  [0.30, [34, 38, 92],   [214, 116, 96]],   // twilight
+  [0.60, [62, 120, 196], [236, 198, 160]],  // morning / evening
+  [1.00, [54, 138, 226], [176, 218, 246]],  // midday
+];
+
+// water is a two-tone noise field (calm tone <-> bright tone), darkened
+// with depth and dimmed with the light level
+const waterCalm = [14, 74, 116];
+const waterBright = [52, 150, 178];
+
+// each dot's gentle idle motion (px amplitude, ms-based speed)
+const bobAmpRange = [2, 4.5];
+const bobSpeedRange = [0.0011, 0.0021];
+const swayAmp = 2.5;
+
+const waterResolution = 8; // water noise is computed at 1/8 res, then scaled up smooth
+
+// how long (ms) Daphnia take to glide from their old depth to a newly
+// computed one whenever the environment reading changes
+const transitionDuration = 4000; // slower glide for live updates
+
+// layout constants - these define margins, everything else is derived
+// from the current window size in updateLayout()
+const leftMargin = 90;   // room for depth labels
+const rightMargin = 40;
+const bottomMargin = 130; // room for the live readout and size key
+
+let lakeLeft, lakeRight, lakeTop, bandHeight;
+let numRows;
+let waterCanvas, waterCtx, waterData; // small offscreen buffer holding the animated water noise
+let daphniaIndividuals; // each: {size, diameter, xFrac, yJitterFrac, prevDepth, targetDepth, transitionStart}
+
+// ------------------------------------------------------------
+// Live Trout Lake buoy feed
+//
+// Data come from the same two endpoints the UW-Madison Center for
+// Limnology's buoy viewer uses (https://uwcfl.github.io/buoy-viewer/trout.html),
+// mirrored into trout_latest.json by a GitHub Action (see MIRROR_URL below).
+// Each returns one CSV per day (Chicago local time), one row per minute,
+// growing through the day:
+//   export    : air_temp, rel_hum, wind_speed, wind_dir, barom_pres_mbar,
+//               par, do_wtemp, do_raw, do_sat, co2_*, spec_cond, precip_mm
+//   watertemp : RBRSurfTemp + RBRTempProfile(1..24) - a 25-sensor
+//               thermistor chain from 0 m to 30 m
+// The buoy page notes these data are NOT quality controlled.
+//
+// What feeds the model:
+//   temperature - the full measured profile, interpolated onto the
+//                 model's 2 m patches (replaces the May 1992 temps)
+//   light       - the buoy's surface PAR sensor when it reports a number
+//                 (PAR is already PPFD, umol/m2/s, the model's unit);
+//                 otherwise (the sensor is currently blank) a clear-sky
+//                 estimate from the sun's position over Trout Lake at the
+//                 current time, updated every minute
+// What only feeds the picture: wind (surface ripple), and the readout
+// panel (air temp, DO, conductivity when the sensors report).
+// What the buoy can't supply: chlorophyll, predators, food probability -
+// those stay at the May 1992 values.
+// ------------------------------------------------------------
+
+const BUOY_EXPORT_URL = "https://buoy-export-proxy.uwcfl.workers.dev/Trout";
+const BUOY_WTEMP_URL = "https://buoy-watertemp-proxy.uwcfl.workers.dev/Trout";
+const BUOY_DEPTHS = [0, 0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 20, 25, 30];
+const POLL_INTERVAL = 2 * 60 * 1000; // buoy logs once a minute; checking every 2 min is plenty
+const STALE_AFTER = 60 * 60 * 1000; // call readings older than 1 h "delayed"
+
+// Trout Lake, Vilas County WI (buoy area)
+const LAKE_LAT = 46.03;
+const LAKE_LON = -89.67;
+
+// the model's floor for light - see the slider version for why we never
+// hand the model exactly 0 (predation math divides by ~0)
+const lightRange = { min: light_night, max: Math.round(light_day) };
+
+// latest reading, shared by the model and the readout
+let live = {
+  status: "loading",      // loading | live | delayed | offline
+  timestamp: null,        // Date of the reading
+  profile: null,          // [{depth, temp}] measured
+  par: null,              // buoy PAR if numeric
+  lightSource: "",        // "buoy PAR sensor" | "estimated from time of day"
+  light: light_night,
+  airTemp: null, wind: null, windDir: null, doMg: null, doSat: null, specCond: null,
+  message: "Connecting to the Trout Lake buoy…",
+};
+let modelTemps = null; // temperature per model patch (0..32 m), for labels
+
+// ---- time helpers (buoy timestamps are Chicago local time) -----------
+
+const chicagoFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+});
+
+function chicagoParts(ms) {
+  const p = {};
+  for (const { type, value } of chicagoFmt.formatToParts(new Date(ms))) p[type] = value;
+  return p;
+}
+
+//"2026-10-08 07:48:00" (Chicago local) -> real Date
+function chicagoToDate(str) {
+  const [d, t] = str.trim().split(" ");
+  const [Y, M, D] = d.split("-").map(Number);
+  const [h, m, s] = (t || "0:0:0").split(":").map(Number);
+  const asUTC = Date.UTC(Y, M - 1, D, h, m, s || 0);
+  const p = chicagoParts(asUTC);
+  const offset = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - asUTC;
+  return new Date(asUTC - offset);
+}
+
+//YYYY/YYYYMMDD path for a Chicago calendar day, `daysBack` days ago
+function dayPath(daysBack) {
+  const p = chicagoParts(Date.now() - daysBack * 86400000);
+  return p.year + "/" + p.year + p.month + p.day;
+}
+
+// ---- sun position -> clear-sky surface PAR ---------------------------
+
+//solar elevation (degrees) at Trout Lake for a Date (NOAA approximation)
+function solarElevation(date) {
+  const rad = Math.PI / 180;
+  const start = Date.UTC(date.getUTCFullYear(), 0, 1);
+  const doy = Math.floor((date.getTime() - start) / 86400000) + 1;
+  const hourUTC = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+  const g = (2 * Math.PI / 365) * (doy - 1 + (hourUTC - 12) / 24);
+  const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g)
+    - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g)
+    - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  const eqtime = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g)
+    - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const solarMin = hourUTC * 60 + eqtime + 4 * LAKE_LON;
+  const ha = (solarMin / 4 - 180) * rad;
+  const lat = LAKE_LAT * rad;
+  const cosZen = Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(ha);
+  return 90 - Math.acos(constrain(cosZen, -1, 1)) / rad;
+}
+
+//rough clear-sky PAR (umol/m2/s). ~2000 with the sun overhead, a short
+//exponential fade through civil twilight, then the model's night floor.
+//It knows nothing about clouds, so it overestimates on overcast days.
+function estimatedSurfacePAR(date) {
+  const h = solarElevation(date);
+  const sun = h > 0 ? 2000 * Math.pow(Math.sin(h * Math.PI / 180), 1.2) : 0;
+  const twilight = h > -6 ? 10 * Math.pow(10, h / 3) : 0;
+  return Math.max(sun, twilight, light_night);
+}
+
+// ---- fetching & parsing ---------------------------------------------
+
+//tiny CSV parser - the buoy files have no quoted fields. Rows with the
+//wrong number of columns (e.g. a row still being written) are dropped.
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const header = lines[0].split(",").map(s => s.trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cells = lines[i].split(",");
+    if (cells.length !== header.length) continue;
+    const r = {};
+    header.forEach((h, j) => (r[h] = cells[j].trim()));
+    rows.push(r);
+  }
+  return rows;
+}
+
+function num(v) {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  if (s === "" || s === "NAN" || s === "-99") return null;
+  const f = parseFloat(s);
+  return isNaN(f) || f === -99 ? null : f;
+}
+
+// WHERE THE DATA COMES FROM
+//
+// The CFL's buoy feed only lets browser pages on https://uwcfl.github.io
+// read it (its CORS header names that one site), so this page can't fetch
+// it directly. Instead, a GitHub Action in this site's repo
+// (.github/workflows/trout-buoy.yml + scripts/fetch_trout_buoy.py) copies
+// the newest reading into trout_latest.json, next to this page, every
+// ~10 minutes. This page reads that copy.
+const MIRROR_URL = "trout_latest.json";
+
+// If the CFL ever adds your site to their allowed list, set this to true
+// to read the feed directly too (minute-by-minute instead of ~10 min).
+const TRY_DIRECT_FEED = location.hostname === "uwcfl.github.io";
+
+//fetch one CSV file from the CFL feed. Returns its text, or null.
+async function fetchText(url) {
+  try {
+    const r = await fetch(url, { cache: "no-store" });
+    if (r.ok) return await r.text();
+    console.warn("[buoy] HTTP " + r.status + " for " + url);
+  } catch (err) {
+    console.warn("[buoy] direct request failed for " + url + ":", err.message);
+  }
+  return null;
+}
+
+//one Chicago calendar day of buoy data. The temperature file is required;
+//the weather/sensor file is a bonus.
+async function fetchDay(daysBack) {
+  const path = dayPath(daysBack);
+  const [w, e] = await Promise.all([
+    fetchText(BUOY_WTEMP_URL + "/" + path),
+    fetchText(BUOY_EXPORT_URL + "/" + path),
+  ]);
+  if (!w) return null;
+  return { wRows: parseCSV(w), eRows: e ? parseCSV(e) : [] };
+}
+
+//the mirrored copy -> {timestamp, profile, weather} or null
+async function readMirror() {
+  try {
+    const r = await fetch(MIRROR_URL + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) {
+      console.warn("[buoy] " + MIRROR_URL + ": HTTP " + r.status + " (has the GitHub Action run yet?)");
+      return null;
+    }
+    const d = await r.json();
+    if (!d.profile || d.profile.length < 2) return null;
+    return {
+      timestamp: chicagoToDate(d.timestamp_local),
+      profile: d.profile.slice().sort((x, y) => x.depth - y.depth),
+      weather: d.weather || {},
+    };
+  } catch (err) {
+    console.warn("[buoy] couldn't read " + MIRROR_URL + ":", err.message);
+    return null;
+  }
+}
+
+//straight from the CFL feed (only works where the feed allows it)
+async function readDirect() {
+  for (let back = 0; back <= MAX_DAYS_BACK; back++) {
+    const day = await fetchDay(back);
+    if (!day || !day.wRows.length) continue;
+    const hit = newestProfileRow(day.wRows);
+    if (!hit) continue;
+    const eRow = day.eRows.find(r => r.TIMESTAMP === hit.row.TIMESTAMP) || day.eRows[day.eRows.length - 1] || {};
+    return { timestamp: chicagoToDate(hit.row.TIMESTAMP), profile: hit.profile, weather: eRow };
+  }
+  return null;
+}
+
+//profile from one watertemp row -> [{depth, temp}] for sensors that read
+function rowProfile(r) {
+  const out = [];
+  BUOY_DEPTHS.forEach((depth, i) => {
+    const t = num(i === 0 ? r.RBRSurfTemp : r["RBRTempProfile(" + i + ")"]);
+    if (t !== null && t > -2 && t < 40) out.push({ depth, temp: t });
+  });
+  return out;
+}
+
+//newest row with at least half the thermistor chain reporting
+function newestProfileRow(rows) {
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const p = rowProfile(rows[i]);
+    if (p.length >= BUOY_DEPTHS.length / 2) return { row: rows[i], profile: p };
+  }
+  return null;
+}
+
+//"12 min ago", "9 h ago"
+function ageText(ms) {
+  const min = Math.round(ms / 60000);
+  if (min < 60) return min + " min ago";
+  const h = Math.round(min / 60);
+  return h < 48 ? h + " h ago" : Math.round(h / 24) + " days ago";
+}
+
+// The buoy uploads in batches, so the newest reading can be many hours
+// old (the official viewer itself often shows last night's data in the
+// morning). Look back up to MAX_DAYS_BACK days for the newest reading.
+const MAX_DAYS_BACK = 3;
+
+async function pollBuoy() {
+  let reading = null;
+  if (TRY_DIRECT_FEED) reading = await readDirect();
+  if (!reading) reading = await readMirror();
+  // whichever source is newer wins if both ever work
+  if (TRY_DIRECT_FEED && reading) {
+    const m = await readMirror();
+    if (m && m.timestamp > reading.timestamp) reading = m;
+  }
+
+  if (reading) {
+    const w = reading.weather;
+    const age = Date.now() - reading.timestamp.getTime();
+    live = {
+      ...live,
+      status: age > STALE_AFTER ? "delayed" : "live",
+      timestamp: reading.timestamp,
+      profile: reading.profile,
+      par: num(w.par),
+      airTemp: num(w.air_temp),
+      wind: num(w.wind_speed),
+      windDir: num(w.wind_dir),
+      doMg: num(w.do_raw),
+      doSat: num(w.do_sat),
+      specCond: num(w.spec_cond),
+      message: age > STALE_AFTER ? "newest buoy upload " + ageText(age) : "",
+    };
+  } else if (live.profile) {
+    // this poll failed but an earlier one worked - keep that reading
+    live = { ...live, status: "delayed", message: "couldn't refresh; keeping reading from " + ageText(Date.now() - live.timestamp) };
+  } else {
+    live = {
+      ...live,
+      status: "offline",
+      profile: null, par: null,
+      message: location.protocol === "file:"
+        ? "Open this page from your website (or a local server) to load buoy data — showing May 1992 temperatures"
+        : "No buoy data yet (" + MIRROR_URL + " missing) — showing May 1992 temperatures",
+    };
+  }
+  updateLight();
+  recompute(daphniaIndividuals === null);
+}
+
+// ---- light ---------------------------------------------------------------
+// Use the buoy's PAR sensor only when it has a number from a reading less
+// than 30 min old. Otherwise (sensor blank, which it currently is, or the
+// reading is old) estimate surface light from the sun's position over
+// Trout Lake RIGHT NOW, so day/night always follows the real clock.
+const PAR_MAX_AGE = 30 * 60 * 1000;
+
+function updateLight() {
+  const fresh = live.timestamp && Date.now() - live.timestamp.getTime() < PAR_MAX_AGE;
+  if (live.par !== null && fresh) {
+    live.light = Math.max(live.par, light_night);
+    live.lightSource = "buoy PAR sensor";
+  } else {
+    live.light = estimatedSurfacePAR(new Date());
+    live.lightSource = "estimated from time of day";
+  }
+}
+
+//between buoy polls, keep the estimated light tracking the clock; re-run
+//the model when it has drifted more than ~2%
+const LIGHT_TICK = 60 * 1000;
+function lightTick() {
+  const before = live.light;
+  updateLight();
+  if (Math.abs(live.light - before) > 0.02 * Math.max(before, 1)) recompute(false);
+}
+
+// ---- model input --------------------------------------------------------
+
+//measured temperature at any depth: linear interpolation between sensors,
+//held constant beyond the deepest working sensor (chain stops at 30 m,
+//the model's deepest patch is 32 m)
+function profileTempAt(profile, depth) {
+  if (depth <= profile[0].depth) return profile[0].temp;
+  for (let i = 1; i < profile.length; i++) {
+    if (depth <= profile[i].depth) {
+      const a = profile[i - 1], b = profile[i];
+      return a.temp + (b.temp - a.temp) * (depth - a.depth) / (b.depth - a.depth);
+    }
+  }
+  return profile[profile.length - 1].temp;
+}
+
+function buildLiveData() {
+  if (!live.profile) return trmay92_df.map(row => ({ ...row }));
+  return trmay92_df.map(row => ({ ...row, temp: profileTempAt(live.profile, row.depth) }));
+}
+
+function recompute(isFirstRun) {
+  const data = buildLiveData();
+  modelTemps = data.map(r => r.temp);
+  const results = dvmsimulation(n_timesteps, critical, capacity, data,
+    "depth", "food_prob", "predators", "chl", "temp", k, live.light);
+  const final = results.filter(r => r.Timestep === n_timesteps);
+
+  // always show the full 0-32 m column, so the layout doesn't jump around
+  // as the live readings move the deepest occupied patch
+  numRows = Math.max(...trmay92_df.map(r => r.depth)) / 2 + 1;
+
+  const now = millis();
+  if (isFirstRun) {
+    const counts = evenSplit(populationSize, final.length);
+    daphniaIndividuals = [];
+    final.forEach((row, i) => {
+      const diameter = map(row.Size, critical, capacity, minCircleDiameter, maxCircleDiameter);
+      for (let j = 0; j < counts[i]; j++) {
+        daphniaIndividuals.push({
+          size: row.Size, diameter,
+          xFrac: random(0, 1), yJitterFrac: random(0, 1),
+          bobPhase: random(TWO_PI), swayPhase: random(TWO_PI),
+          bobSpeed: random(bobSpeedRange[0], bobSpeedRange[1]),
+          bobAmp: random(bobAmpRange[0], bobAmpRange[1]),
+          groupIndex: i,
+          prevDepth: row.Depth, targetDepth: row.Depth, transitionStart: now,
+        });
+      }
+    });
+  } else {
+    for (const d of daphniaIndividuals) {
+      d.prevDepth = currentDepth(d, now);
+      d.targetDepth = final[d.groupIndex].Depth;
+      d.transitionStart = now;
+    }
+  }
+  updateLayout();
+}
+
+// ---- p5 lifecycle -----------------------------------------------------------
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noiseDetail(2, 0.5);
+  daphniaIndividuals = null;
+
+  // draw immediately on the baseline while the first request is in flight
+  updateLight();
+  numRows = 17;
+  updateLayout();
+  recompute(true);
+
+  pollBuoy();
+  setInterval(pollBuoy, POLL_INTERVAL);
+  setInterval(lightTick, LIGHT_TICK);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  updateLayout();
+}
+
+function updateLayout() {
+  lakeLeft = leftMargin;
+  lakeRight = width - rightMargin;
+  lakeTop = Math.max(120, Math.round(height * 0.18));
+  bandHeight = (height - lakeTop - bottomMargin) / numRows;
+
+  const wW = Math.ceil(width / waterResolution);
+  const wH = Math.ceil((height - lakeTop) / waterResolution);
+  if (!waterCanvas || waterCanvas.width !== wW || waterCanvas.height !== wH) {
+    waterCanvas = document.createElement("canvas");
+    waterCanvas.width = wW;
+    waterCanvas.height = wH;
+    waterCtx = waterCanvas.getContext("2d");
+    waterData = waterCtx.createImageData(wW, wH);
+  }
+}
+
+
+//splits `total` individuals as evenly as possible across `n` groups
+function evenSplit(total, n) {
+  const base = Math.floor(total / n);
+  const remainder = total % n;
+  const counts = new Array(n).fill(base);
+  for (let i = 0; i < remainder; i++) counts[i] += 1;
+  return counts;
+}
+
+//a Daphnia's interpolated depth right now, easing from prevDepth to
+//targetDepth over transitionDuration ms
+function currentDepth(d, now) {
+  const t = constrain((now - d.transitionStart) / transitionDuration, 0, 1);
+  const eased = t * t * (3 - 2 * t); // smoothstep
+  return lerp(d.prevDepth, d.targetDepth, eased);
+}
+
+//converts a real depth (in meters) into a pixel Y position, using the
+//CURRENT layout - always safe to call after a resize
+function depthToY(depthMeters, diameter, jitterFrac) {
+  const bandIndex = depthMeters / 2;
+  const bandTop = lakeTop + bandIndex * bandHeight;
+  const usable = Math.max(bandHeight - diameter, 0);
+  return bandTop + diameter / 2 + jitterFrac * usable;
+}
+
+
+function draw() {
+  background(6, 16, 28);
+
+  // between buoy polls the light changes only via new readings; nothing
+  // to debounce here - pollBuoy() calls recompute() directly
+  const lightFrac = lightToFrac(live.light);
+  const sky = skyColors(lightFrac);
+
+  drawSky(sky);
+  drawWater(lightFrac, sky);
+  drawSurfaceShimmer(lightFrac);
+  drawDepthLabels();
+  drawReadout();
+  drawSizeLegend();
+  drawDaphnia();
+}
+
+// ---- color helpers ---------------------------------------------------
+
+function lerpRGB(a, b, t) {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+function css(c) {
+  return "rgb(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + ")";
+}
+
+//light reading -> 0..1 on a log scale
+function lightToFrac(light) {
+  const lo = lightRange.min;
+  const hi = lightRange.max;
+  return constrain(Math.log(Math.max(light, lo) / lo) / Math.log(hi / lo), 0, 1);
+}
+
+function skyColors(f) {
+  for (let i = 1; i < skyStops.length; i++) {
+    if (f <= skyStops[i][0]) {
+      const [f0, top0, hor0] = skyStops[i - 1];
+      const [f1, top1, hor1] = skyStops[i];
+      const u = (f - f0) / (f1 - f0);
+      return { top: lerpRGB(top0, top1, u), horizon: lerpRGB(hor0, hor1, u) };
+    }
+  }
+  const last = skyStops[skyStops.length - 1];
+  return { top: last[1], horizon: last[2] };
+}
+
+// ---- scenery -----------------------------------------------------------
+
+//the sky: vertical gradient from the zenith color down to the horizon
+function drawSky(sky) {
+  const grad = drawingContext.createLinearGradient(0, 0, 0, lakeTop);
+  grad.addColorStop(0, css(sky.top));
+  grad.addColorStop(1, css(sky.horizon));
+  drawingContext.fillStyle = grad;
+  drawingContext.fillRect(0, 0, width, lakeTop);
+}
+
+//the water: two slowly drifting layers of noise blend between a calm and
+//a bright tone, which reads as light moving through water. Computed in a
+//small buffer (cheap) and scaled up smoothly (soft). It darkens with
+//depth, dims when the light is low, and picks up a reflection of the sky
+//color near the surface.
+function drawWater(lightFrac, sky) {
+  const t = millis() * 0.0004;
+  const w = waterCanvas.width;
+  const h = waterCanvas.height;
+  const lakeDepthPx = numRows * bandHeight;
+  const lightScale = 0.34 + 0.66 * lightFrac;
+
+  const px = waterData.data;
+  for (let y = 0; y < h; y++) {
+    const depthFrac = (y * waterResolution) / lakeDepthPx;
+    const shade = Math.max(0.22, 1 - 0.62 * depthFrac) * lightScale;
+    const reflect = 0.4 * Math.pow(Math.max(0, 1 - depthFrac * 3), 2);
+    for (let x = 0; x < w; x++) {
+      const n1 = noise(x * 0.045 + t, y * 0.09 - t * 0.6);
+      const n2 = noise(x * 0.11 - t * 0.8 + 100, y * 0.2 + t * 0.9 + 50);
+      const n = constrain((n1 * 0.65 + n2 * 0.35 - 0.3) / 0.4, 0, 1);
+
+      const r = (waterCalm[0] + (waterBright[0] - waterCalm[0]) * n) * shade;
+      const g = (waterCalm[1] + (waterBright[1] - waterCalm[1]) * n) * shade;
+      const b = (waterCalm[2] + (waterBright[2] - waterCalm[2]) * n) * shade;
+
+      const i = 4 * (y * w + x);
+      px[i]     = r + (sky.horizon[0] - r) * reflect;
+      px[i + 1] = g + (sky.horizon[1] - g) * reflect;
+      px[i + 2] = b + (sky.horizon[2] - b) * reflect;
+      px[i + 3] = 255;
+    }
+  }
+  waterCtx.putImageData(waterData, 0, 0);
+  drawingContext.imageSmoothingEnabled = true;
+  drawingContext.imageSmoothingQuality = "high";
+  drawingContext.drawImage(waterCanvas, 0, lakeTop, width, height - lakeTop);
+}
+
+//a soft bright edge and a little ripple along the 0 m line
+function drawSurfaceShimmer(lightFrac) {
+  const t = millis() * 0.001;
+  // live wind speed (m/s) roughens the surface line
+  const wind = live.wind === null ? 0 : Math.min(live.wind, 12);
+  const amp = 1.2 + wind * 0.35;
+  const spd = 1 + wind * 0.12;
+
+  const glow = drawingContext.createLinearGradient(0, lakeTop, 0, lakeTop + 36);
+  glow.addColorStop(0, "rgba(255,255,255," + (0.05 + 0.2 * lightFrac).toFixed(3) + ")");
+  glow.addColorStop(1, "rgba(255,255,255,0)");
+  drawingContext.fillStyle = glow;
+  drawingContext.fillRect(0, lakeTop, width, 36);
+
+  noFill();
+  stroke(255, 40 + 120 * lightFrac);
+  strokeWeight(1.5);
+  beginShape();
+  for (let x = 0; x <= width + 8; x += 8) {
+    vertex(x, lakeTop + Math.sin(x * 0.02 + t * 1.6 * spd) * amp + Math.sin(x * 0.055 - t * 1.1 * spd) * (amp * 0.6));
+  }
+  endShape();
+  strokeWeight(1);
+  noStroke();
+}
+
+// ---- Daphnia -----------------------------------------------------------
+
+//a white circle with a soft halo and glow.
+//With hundreds of dots, canvas shadowBlur on every dot every frame is far
+//too slow, so each diameter's glow is rendered once into a small sprite
+//canvas and then just stamped with drawImage.
+const glowSprites = new Map();
+
+function getGlowSprite(diameter) {
+  const key = diameter.toFixed(2);
+  let s = glowSprites.get(key);
+  if (s) return s;
+
+  const density = pixelDensity();
+  const blur = 4 + diameter * 0.8;
+  const half = diameter / 2 + blur * 1.6 + 2; // CSS px from center to edge
+  const c = document.createElement("canvas");
+  c.width = c.height = Math.ceil(half * 2 * density);
+  const g = c.getContext("2d");
+  g.scale(density, density);
+
+  // faint halo
+  g.fillStyle = "rgba(255,255,255,0.13)";
+  g.beginPath(); g.arc(half, half, diameter * 1.15, 0, Math.PI * 2); g.fill();
+
+  // glowing core (two passes, like the original look)
+  g.fillStyle = "#fff";
+  g.shadowColor = "rgba(255,255,255,0.95)";
+  g.shadowBlur = blur * density;
+  g.beginPath(); g.arc(half, half, diameter / 2, 0, Math.PI * 2); g.fill();
+  g.shadowBlur = (2 + diameter * 0.3) * density;
+  g.beginPath(); g.arc(half, half, diameter / 2, 0, Math.PI * 2); g.fill();
+
+  s = { canvas: c, half };
+  glowSprites.set(key, s);
+  return s;
+}
+
+function glowDot(x, y, diameter) {
+  const s = getGlowSprite(diameter);
+  drawingContext.drawImage(s.canvas, x - s.half, y - s.half, s.half * 2, s.half * 2);
+}
+
+function drawDaphnia() {
+  const usableWidth = lakeRight - lakeLeft;
+  const now = millis();
+
+  for (const d of daphniaIndividuals) {
+    const depth = currentDepth(d, now);
+
+    // gentle idle motion: mostly a slow vertical bob, with a smaller
+    // slower sideways sway on its own phase so they don't move in sync
+    const bob = Math.sin(now * d.bobSpeed + d.bobPhase) * d.bobAmp;
+    const sway = Math.sin(now * d.bobSpeed * 0.6 + d.swayPhase) * swayAmp;
+
+    // keep the bob from poking a dot above the water surface
+    const y = Math.max(
+      depthToY(depth, d.diameter, d.yJitterFrac) + bob,
+      lakeTop + d.diameter / 2 + 1
+    );
+    const pad = d.diameter / 2 + 1;
+    const x = lakeLeft + pad + d.xFrac * Math.max(usableWidth - 2 * pad, 0) + sway;
+
+    glowDot(x, y, d.diameter);
+  }
+}
+
+
+// ---- labels and readout -------------------------------------------------
+
+//the meter marks down the left edge, each with the temperature the model
+//is using for that patch (live from the buoy chain when connected)
+function drawDepthLabels() {
+  const ctx = drawingContext;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,16,32,0.7)";
+  ctx.shadowBlur = 4 * pixelDensity();
+  noStroke();
+  textAlign(RIGHT, CENTER);
+  for (let i = 0; i < numRows; i++) {
+    const depth = i * 2;
+    const y = lakeTop + i * bandHeight + bandHeight / 2;
+    fill(255, 225);
+    textSize(12);
+    text(depth + " m", lakeLeft - 10, y - (bandHeight > 26 ? 6 : 0));
+    if (modelTemps && bandHeight > 26) {
+      fill(191, 227, 255, 190);
+      textSize(10.5);
+      text(modelTemps[i].toFixed(1) + "°", lakeLeft - 10, y + 7);
+    }
+  }
+  ctx.restore();
+}
+
+function fmt(v, digits, unit) {
+  return v === null || v === undefined ? "—" : v.toFixed(digits) + unit;
+}
+
+function compass(deg) {
+  if (deg === null) return "";
+  return " " + ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(deg / 45) % 8];
+}
+
+//live data panel along the bottom
+function drawReadout() {
+  noStroke();
+  textAlign(LEFT, BOTTOM);
+
+  const dotColor = { live: [120, 230, 150], delayed: [240, 200, 90], offline: [240, 120, 110], loading: [180, 190, 200] }[live.status];
+  const statusWord = { live: "LIVE", delayed: "DELAYED", offline: "OFFLINE", loading: "LOADING" }[live.status];
+  const y1 = height - 98;
+  const y2 = height - 78;
+
+  fill(dotColor[0], dotColor[1], dotColor[2]);
+  ellipse(lakeLeft + 4, y1 - 7, 7, 7);
+  fill(255, 235);
+  textSize(13);
+  textStyle(BOLD);
+  text("Trout Lake buoy · " + statusWord, lakeLeft + 14, y1);
+  textStyle(NORMAL);
+
+  let head = "";
+  if (live.timestamp) {
+    head = "reading " + live.timestamp.toLocaleString("en-US", {
+      timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    }) + " CT";
+  }
+  if (live.message) head += (head ? " — " : "") + live.message;
+  fill(255, 180);
+  text(head, lakeLeft + 14 + textWidth("Trout Lake buoy · " + statusWord) + 16, y1);
+
+  const lightText = live.light < 10 ? live.light.toFixed(2) : Math.round(live.light);
+  const parts = [
+    "Light " + lightText + " µmol/m²/s (" + live.lightSource + ")",
+    "Air " + fmt(live.airTemp, 1, " °C"),
+    "Wind " + fmt(live.wind, 1, " m/s") + compass(live.windDir),
+  ];
+  if (live.doMg !== null) parts.push("DO " + fmt(live.doMg, 1, " mg/L") + (live.doSat !== null ? " (" + live.doSat.toFixed(0) + "%)" : ""));
+  if (live.specCond !== null) parts.push("Cond " + fmt(live.specCond, 0, " µS/cm"));
+  fill(255, 215);
+  textSize(12.5);
+  text(parts.join("   ·   "), lakeLeft, y2);
+}
+
+//size key, along the bottom
+function drawSizeLegend() {
+  const legendY = height - 38;
+
+  glowDot(lakeLeft + 10, legendY, minCircleDiameter);
+  glowDot(lakeLeft + 100, legendY, maxCircleDiameter);
+
+  noStroke();
+  fill(255, 225);
+  textSize(13);
+  textAlign(LEFT, CENTER);
+  text(critical + " μg", lakeLeft + 26, legendY);
+  text(capacity + " μg", lakeLeft + 120, legendY);
+  fill(255, 150);
+  textSize(11.5);
+  text("Uncontrolled real-time data: UW–Madison Center for Limnology. Chlorophyll & predators: May 1992 profile.", lakeLeft + 190, legendY);
+}
+
+</script>
+</body>
+</html>
