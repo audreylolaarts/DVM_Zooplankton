@@ -21,4 +21,5 @@ The live page reads `trout_latest.json`. The Pages source must be set to **GitHu
 
 - Model: DaphniaDVM by Bennett McAfee, ported to JavaScript with permission.
 - Live data: [Trout Lake Buoy Live Data](https://uwcfl.github.io/buoy-viewer/trout.html), UW-Madison Center for Limnology. These data are not quality controlled.
-- Zooplankton: Magnuson, J., S. Carpenter, and E. Stanley. North Temperate Lakes LTER: Zooplankton – Trout Lake Area 1982 – current. Environmental Data Initiative. doi:10.6073/pasta/aba16e9867e8f7b41b08dae0e92d6a98
+- Zooplankton: NTL LTER, E.H. Stanley, S.R. Carpenter, and J.J. Magnuson. 2026. North Temperate Lakes LTER: Zooplankton - Trout Lake Area 1982 - current ver 42. Environmental Data Initiative. Monthly Daphnia density sets the dot count, and measured lengths set the size mix.
+- Lake volume: Trout Lake, 0.240 km³ (Wisconsin DNR).
