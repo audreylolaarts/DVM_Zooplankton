@@ -8,6 +8,7 @@ Live site: https://audreylolaarts.github.io/DVM_Zooplankton/
 - `dvm_lake_map_slider.html` (Data Sliders) lets you set the light and temperature yourself.
 - `dvm_lake_live_data.html` (Live Buoy Data) is driven by the Trout Lake buoy.
 - `dvm_lake_timeline.html` (Lake Through Time) plays the Trout Lake record from 1981 to 2025, one week per day-night cycle, with ice cover on the real dates. Its data are in `timeline_data.js`.
+- `dvm_lake_sound.html` (Lake in Sound) plays the same timeline on piano. Each note is one Daphnia: depth sets the pitch, size sets the volume, and population sets how often notes play. Notes come from C major 7 by day and C minor 7 by night. The piano samples are in `piano/`.
 
 ## How the live data works
 
@@ -37,5 +38,6 @@ The script fills gaps between field samples. Gaps of up to 60 days are interpola
 - Ice: Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2026. North Temperate Lakes LTER: Ice Duration - Trout Lake Area 1981 - current ver 32. Environmental Data Initiative. https://doi.org/10.6073/pasta/d2c65ae81f95dd29cc6568344621680c (Accessed 2026-10-09).
 - Wind and sunlight: Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2026. North Temperate Lakes LTER: Meteorological Data - Woodruff Airport 1989 - current ver 41. Environmental Data Initiative. https://doi.org/10.6073/pasta/ef5fbb5faa65e57449de0faeff8b497f (Accessed 2026-10-09). Hourly data.
 - Fish: Magnuson, J., S. Carpenter, and E. Stanley. 2025. North Temperate Lakes LTER: Pelagic Prey - Sonar Data 2001 - current ver 36. Environmental Data Initiative. https://doi.org/10.6073/pasta/7ba35a0a5f23fd0fcc7039187a0fbd91 (Accessed 2026-10-09). The Interval Density table gives zooplankton-eating fish per 1,000 m³ by depth, which are the model's predator units.
+- Piano: Salamander Grand Piano V3 (Yamaha C5) by Alexander Holm, CC-BY 3.0 (https://creativecommons.org/licenses/by/3.0/), via https://github.com/Tonejs/audio. The license text is in `piano/LICENSE-Salamander.txt`.
 - Zooplankton: NTL LTER, E.H. Stanley, S.R. Carpenter, and J.J. Magnuson. 2026. North Temperate Lakes LTER: Zooplankton - Trout Lake Area 1982 - current ver 42. Environmental Data Initiative. Monthly Daphnia density sets the dot count, and measured lengths set the size mix.
 - Lake volume: Trout Lake, 0.240 km³ (Wisconsin DNR).
