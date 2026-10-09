@@ -1012,12 +1012,16 @@ function drawLegend() {
 //   size       -> loudness. 5 μg animals are soft, 60 μg animals loud.
 //   depth      -> pitch. Each 2 m band of water is one note: the surface is
 //                 highest (C6) and the 32 m band lowest (C2).
-//   harmony    -> every note is a chord tone: root, third, fifth, seventh,
-//                 stacked through four octaves. In daylight that is
-//                 C major 7 (C E G B). As the light fades the thirds and
-//                 sevenths gradually flatten - each one is played as E♭ or
-//                 B♭ with a chance that grows with darkness - until night
-//                 is C minor 7 (C E♭ G B♭). Dawn reverses it.
+//   harmony    -> every note is a chord tone of a major 13 chord (root,
+//                 3rd, 5th, 7th, 9th, 13th), voiced like a jazz pianist:
+//                 roots and fifths low, colour tones (7ths, 9ths, 13ths) in
+//                 the middle and top. Daylight is C major 13 (C E G B D A).
+//                 Night moves to F major 13 (F A C E G D), the nearest
+//                 related major key: the two chords share five notes, so
+//                 nightfall mostly softens B to C and settles the bass from
+//                 C onto F. The change is gradual - each note comes from
+//                 the night chord with a chance that grows with darkness -
+//                 and dawn brings it back to C.
 //   ice        -> the piano is muffled (a low-pass filter) while the lake
 //                 is frozen, as if heard through the ice.
 //
@@ -1042,20 +1046,28 @@ function sampleMidi(name) {
   return 12 * (Number(m[2]) + 1) + NOTE_INDEX[m[1]];
 }
 
-// the 17 depth bands from deepest (index 0, C2) up to the surface (C6):
-// chord-tone ladder C E G B | C E G B | ... | C, as [midi, kind]
-const LADDER = [];
-for (let oct = 2; oct <= 5; oct++) {
-  const c = 12 * (oct + 1);
-  LADDER.push([c, "root"], [c + 4, "third"], [c + 7, "fifth"], [c + 11, "seventh"]);
+// one note per depth band, deepest (index 0) to the surface (index 16).
+// Both ladders climb through the same register, so a Daphnia at a given
+// depth sounds at about the same height by day and by night.
+function noteNum(name) {   // "C#4" / "Eb3" / "G2" -> MIDI number
+  const m = name.match(/^([A-G])([#b]?)(\d)$/);
+  const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]];
+  return 12 * (Number(m[3]) + 1) + base + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0);
 }
-LADDER.push([12 * 7, "root"]); // C6
+// C major 13: C E G B D A
+const DAY_LADDER = ["C2", "G2", "C3", "E3", "G3", "B3", "D4", "E4", "G4",
+  "A4", "B4", "D5", "E5", "G5", "A5", "B5", "C6"].map(noteNum);
+// F major 13: F A C E G D
+const NIGHT_LADDER = ["F2", "C3", "F3", "G3", "A3", "C4", "D4", "E4", "G4",
+  "A4", "C5", "D5", "E5", "F5", "G5", "A5", "C6"].map(noteNum);
+const DAY_CHORD = "C major 13";
+const NIGHT_CHORD = "F major 13";
 
 let samples = [];        // {midi, sound}
 let soundStarted = false;
 let soundMuted = false;
 let pianoFilter, pianoReverb;
-let minorAmount = 0;     // 0 = C major 7 .. 1 = C minor 7, eased
+let nightAmount = 0;     // 0 = day chord .. 1 = night chord, eased
 let noteDebt = 0;        // fractional notes carried between frames
 let notesThisSecond = [];
 let startButton, muteButton;
@@ -1116,12 +1128,12 @@ function sampleFor(midi) {
   return { sound: best.sound, rate: Math.pow(2, (midi - best.midi) / 12) };
 }
 
-//pitch for a depth (m), with the night-time flattening applied by chance
+//pitch for a depth (m): from the night chord with a chance that grows
+//with darkness, otherwise from the day chord
 function pitchForDepth(depthM) {
   const band = constrain(Math.round(depthM / 2), 0, 16);  // 0 = surface
-  const [midi, kind] = LADDER[16 - band];
-  const flat = (kind === "third" || kind === "seventh") && Math.random() < minorAmount;
-  return { midi: flat ? midi - 1 : midi, flat };
+  const night = Math.random() < nightAmount;
+  return { midi: (night ? NIGHT_LADDER : DAY_LADDER)[16 - band], night };
 }
 
 function playDaphnia(d) {
@@ -1134,9 +1146,9 @@ function playDaphnia(d) {
 
 //called every frame from draw()
 function updateSound(dt, lightFrac) {
-  // harmony: fully major above early-morning light, fully minor in the dark
+  // harmony: day chord above early-morning light, night chord in the dark
   const target = 1 - constrain((lightFrac - 0.15) / 0.4, 0, 1);
-  minorAmount += (target - minorAmount) * Math.min(1, dt / 900);
+  nightAmount += (target - nightAmount) * Math.min(1, dt / 900);
 
   // muffled under the ice
   if (pianoFilter) {
@@ -1173,8 +1185,8 @@ function drawSoundLegend() {
   noStroke();
   textAlign(RIGHT, CENTER);
   textSize(11.5);
-  const pct = Math.round(minorAmount * 100);
-  const chord = pct < 5 ? "C major 7" : pct > 95 ? "C minor 7" : "C major 7 → minor 7 (" + pct + "% minor)";
+  const pct = Math.round(nightAmount * 100);
+  const chord = pct < 5 ? DAY_CHORD : pct > 95 ? NIGHT_CHORD : DAY_CHORD + " → " + NIGHT_CHORD + " (" + pct + "%)";
   fill(255, 236, 190, 220);
   text("♪ " + chord + (iceAmount > 0.5 ? " · muffled under ice" : ""), lakeRight, height - 30);
   fill(255, 150);
