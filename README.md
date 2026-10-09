@@ -19,7 +19,8 @@ The live page reads `trout_latest.json`. The Pages source must be set to **GitHu
 
 ## Sources
 
-- Model: DaphniaDVM by Bennett McAfee, ported to JavaScript with permission.
+- Model: DaphniaDVM by Bennett McAfee, ported to JavaScript with permission. Predator profile (both drawings) and baseline temperatures (Data Sliders): Trout Lake, May 1992.
 - Live data: [Trout Lake Buoy Live Data](https://uwcfl.github.io/buoy-viewer/trout.html), UW-Madison Center for Limnology. These data are not quality controlled.
+- Chlorophyll: Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2025. North Temperate Lakes LTER: Chlorophyll - Trout Lake Area 1981 - current ver 33. Environmental Data Initiative. https://doi.org/10.6073/pasta/659e43f4796f71e3a37673a0f2d7a77a (Accessed 2026-10-09). Median chlorophyll by depth: the current month for Live Buoy Data, all dates for Data Sliders.
 - Zooplankton: NTL LTER, E.H. Stanley, S.R. Carpenter, and J.J. Magnuson. 2026. North Temperate Lakes LTER: Zooplankton - Trout Lake Area 1982 - current ver 42. Environmental Data Initiative. Monthly Daphnia density sets the dot count, and measured lengths set the size mix.
 - Lake volume: Trout Lake, 0.240 km³ (Wisconsin DNR).
