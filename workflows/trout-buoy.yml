@@ -1,0 +1,55 @@
+# Publishes this repo as a GitHub Pages site, with the newest Trout Lake
+# buoy reading saved as trout_latest.json, every ~10 minutes and on every
+# push to main.
+#
+# Why: the UW-Madison Center for Limnology's buoy feed only lets browser
+# pages on uwcfl.github.io read it. A GitHub Actions runner isn't a
+# browser, so it can fetch the feed and hand the reading to the page.
+#
+# One-time setup: repo Settings -> Pages -> Build and deployment ->
+# Source: "GitHub Actions".
+name: Publish site with Trout Lake buoy data
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "*/10 * * * *"   # GitHub often starts these a few minutes late
+  workflow_dispatch:          # "Run workflow" button for testing
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+        id: pages
+
+      # Start from the reading already on the live site, so a failed
+      # fetch below doesn't wipe the data off the page.
+      - name: Keep previous reading
+        run: curl -fsS "${{ steps.pages.outputs.base_url }}/trout_latest.json" -o trout_latest.json || echo "No previous reading yet."
+
+      - name: Fetch newest buoy reading
+        run: python3 scripts/fetch_trout_buoy.py trout_latest.json
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - uses: actions/deploy-pages@v4
+        id: deploy
