@@ -20,6 +20,9 @@
 //F(x,t,T) = (1-ßi)[λi F(xi', t+1, T) + (1-λi)F(xi'', t+1, T)]
 
 //example dataset (Trout Lake, May 1992)
+//units: depth m, temp °C, chl μg/L chlorophyll a, predators = fish per
+//1000 m^3 (McAfee 2021; the model divides by 1000 to get fish per m^3),
+//food_prob = probability of finding food (fixed at 0.5)
 const trmay92_df = [
   { depth: 0,  temp: 8.9, chl: 10.6,  predators: 6.31, food_prob: 0.5 },
   { depth: 2,  temp: 8.8, chl: 11,    predators: 1.5,  food_prob: 0.5 },
@@ -371,6 +374,27 @@ const CHL_BY_MONTH = {
 const CHL_ALL_DATES = [2.40, 2.67, 2.80, 2.97, 3.30, 3.90, 3.82, 3.74, 3.34, 2.62, 1.90, 1.66, 1.41, 1.17, 1.08, 1.14, 1.20];
 
 
+// ---- fish (predators), from sonar surveys ----------------------------
+// The model's `predators` input is fish per 1000 m^3 at each 2 m patch
+// (McAfee 2021: "Trout's 15 fish per 1000 m3"; Consum uses predn/1000 to
+// get fish per m^3). These profiles replace the May 1992 column with
+// NTL-LTER sonar surveys of Trout Lake (south basin), one midsummer night
+// survey per year, 2001-2024:
+//   Magnuson, J., S. Carpenter, and E. Stanley. 2025. North Temperate Lakes
+//   LTER: Pelagic Prey - Sonar Data 2001 - current ver 36. Environmental
+//   Data Initiative. https://doi.org/10.6073/pasta/7ba35a0a5f23fd0fcc7039187a0fbd91
+// From the Interval Density table: density (fish per square nautical
+// mile in each 1 m layer) / 1852^2 m^2 x 1000 = fish per 1000 m^3.
+// Zooplankton-eating fish only (cisco, lake whitefish, perch, smelt and
+// unidentified targets); walleye and lake trout eat fish, so they are left
+// out. Averaged across each survey's transects, then over 2 m patches.
+// The sonar can't see the top ~1 m, so the 0 m patch uses the 2 m value.
+// 2014's density column is corrupted and was rebuilt from the raw
+// backscatter (see scripts/build_timeline_data.py).
+// One value per model patch (0, 2, ... 32 m), shallowest first.
+const PREDATORS_ALL_YEARS = [1.49, 1.78, 1.45, 2.59, 2.93, 3.57, 3.32, 6.61, 14.39, 17.18, 19.67, 18.71, 15.68, 12.39, 8.61, 4.77, 0.88]; // mean of all 24 surveys
+const PREDATORS_RECENT = [1.26, 1.26, 2.11, 1.49, 0.63, 1.41, 2.11, 4.87, 8.32, 11.10, 11.28, 8.80, 6.01, 4.28, 2.70, 1.99, 0.86]; // mean of the 2020-2024 surveys
+
 const minCircleDiameter = 2.5; // size at `critical` (smallest Daphnia)
 const maxCircleDiameter = 11;  // size at `capacity` (largest Daphnia)
 
@@ -438,8 +462,8 @@ let daphniaIndividuals; // each: {size, diameter, xFrac, yJitterFrac, prevDepth,
 // What only feeds the picture: wind (surface ripple), and the readout
 // panel (air temp, DO, conductivity when the sensors report).
 // What the buoy can't supply: chlorophyll comes from the NTL-LTER monthly
-// median profile (CHL_BY_MONTH); predators and food probability stay at
-// the May 1992 values.
+// median profile (CHL_BY_MONTH), fish from recent sonar surveys
+// (PREDATORS_RECENT); food probability stays at the model's 0.5.
 // ------------------------------------------------------------
 
 const BUOY_EXPORT_URL = "https://buoy-export-proxy.uwcfl.workers.dev/Trout";
@@ -526,7 +550,8 @@ function solarElevation(date) {
 function estimatedSurfacePAR(date) {
   const h = solarElevation(date);
   const sun = h > 0 ? 2000 * Math.pow(Math.sin(h * Math.PI / 180), 1.2) : 0;
-  const twilight = h > -6 ? 10 * Math.pow(10, h / 3) : 0;
+  // civil twilight only: fades from ~10 at sunrise to the floor at -6 deg
+  const twilight = h > -6 && h <= 0 ? 10 * Math.pow(10, h / 3) : 0;
   return Math.max(sun, twilight, light_night);
 }
 
@@ -748,12 +773,14 @@ function profileTempAt(profile, depth) {
   return profile[profile.length - 1].temp;
 }
 
-//chlorophyll: the buoy has no chlorophyll sensor, so this uses the
-//NTL-LTER median profile for the current month (see CHL_BY_MONTH)
+//chlorophyll and fish: the buoy measures neither, so this uses the
+//NTL-LTER median chlorophyll for the current month (CHL_BY_MONTH) and the
+//average of the five most recent sonar surveys (PREDATORS_RECENT)
 function buildLiveData() {
   const chl = CHL_BY_MONTH[currentMonth];
-  if (!live.profile) return trmay92_df.map((row, i) => ({ ...row, chl: chl[i] }));
-  return trmay92_df.map((row, i) => ({ ...row, temp: profileTempAt(live.profile, row.depth), chl: chl[i] }));
+  const fish = PREDATORS_RECENT;
+  if (!live.profile) return trmay92_df.map((row, i) => ({ ...row, chl: chl[i], predators: fish[i] }));
+  return trmay92_df.map((row, i) => ({ ...row, temp: profileTempAt(live.profile, row.depth), chl: chl[i], predators: fish[i] }));
 }
 
 function recompute(isFirstRun) {
@@ -776,7 +803,7 @@ function recompute(isFirstRun) {
       for (let j = 0; j < counts[i]; j++) {
         daphniaIndividuals.push({
           size: row.Size, diameter,
-          xFrac: random(0, 1), yJitterFrac: random(0, 1),
+          xFrac: random(0, 1), yJitterFrac: random(0, 1), spreadZ: gaussian(),
           bobPhase: random(TWO_PI), swayPhase: random(TWO_PI),
           bobSpeed: random(bobSpeedRange[0], bobSpeedRange[1]),
           bobAmp: random(bobAmpRange[0], bobAmpRange[1]),
@@ -842,6 +869,39 @@ function currentDepth(d, now) {
   const t = constrain((now - d.transitionStart) / transitionDuration, 0, 1);
   const eased = t * t * (3 - 2 * t); // smoothstep
   return lerp(d.prevDepth, d.targetDepth, eased);
+}
+
+// ---- spread around the optimal depth -----------------------------------
+// McAfee's DaphniaDVM doesn't put a whole size class at one depth: it turns
+// each class's optimal depth into a normal distribution with SD 3.84 m (a
+// value he derived from field data on Daphnia in Sparkling Lake, August
+// 1991), and sums the classes (McAfee 2021, "Generation of Vertical
+// Distributions"). The drawing does the same: each dot draws a fixed
+// standard-normal offset once, so it keeps its place in the spread as its
+// size class moves. Dots are reflected at the surface and the bottom
+// instead of piling up there.
+const DEPTH_SPREAD_SD = 3.84;   // m
+const DRAW_TOP_M = -1;          // top edge of the 0 m band
+const DRAW_BOTTOM_M = 33;       // bottom edge of the 32 m band
+
+function gaussian() {
+  let u = 0, v = 0;
+  while (!u) u = Math.random();
+  while (!v) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function spreadDepth(optimal, z, amount) {
+  let m = optimal + z * DEPTH_SPREAD_SD * amount;
+  if (m < DRAW_TOP_M) m = 2 * DRAW_TOP_M - m;
+  if (m > DRAW_BOTTOM_M) m = 2 * DRAW_BOTTOM_M - m;
+  return constrain(m, DRAW_TOP_M, DRAW_BOTTOM_M);
+}
+
+//a depth in meters -> pixel Y, matching the depth labels (each "N m" label
+//sits at the middle of its 2 m band)
+function depthToYContinuous(m) {
+  return lakeTop + (m / 2 + 0.5) * bandHeight;
 }
 
 //converts a real depth (in meters) into a pixel Y position, using the
@@ -1034,7 +1094,7 @@ function drawDaphnia() {
 
     // keep the bob from poking a dot above the water surface
     const y = Math.max(
-      depthToY(depth, d.diameter, d.yJitterFrac) + bob,
+      depthToYContinuous(spreadDepth(depth, d.spreadZ, 1)) + bob,
       lakeTop + d.diameter / 2 + 1
     );
     const pad = d.diameter / 2 + 1;
@@ -1143,7 +1203,7 @@ function drawSizeLegend() {
     " in the lake (" + populationSize + " dots)", lakeLeft + 190, legendY);
   fill(255, 130);
   textSize(10.5);
-  text("Buoy: UW–Madison Center for Limnology (not quality controlled). Population: NTL-LTER zooplankton ver 42. Chlorophyll: NTL-LTER ver 33, monthly median. Predators: May 1992 profile.", lakeLeft, height - 14);
+  text("Buoy: UW–Madison Center for Limnology (not quality controlled). Population: NTL-LTER zooplankton ver 42. Chlorophyll: NTL-LTER ver 33, monthly median. Fish: NTL-LTER sonar, 2020–2024 average.", lakeLeft, height - 14);
 }
 
 </script>
