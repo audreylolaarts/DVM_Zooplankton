@@ -340,6 +340,37 @@ const populationDensity = DAPHNIA_PER_L_BY_MONTH[currentMonth];
 const populationLabel = new Date().toLocaleString("en-US", { timeZone: "America/Chicago", month: "long" }) + " average";
 const populationSize = Math.round(populationDensity * DOTS_PER_DENSITY);
 
+// ---- chlorophyll, from field data ------------------------------------
+// Chlorophyll a (μg/L) by depth for Trout Lake from:
+//   Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2025. North
+//   Temperate Lakes LTER: Chlorophyll - Trout Lake Area 1981 - current
+//   ver 33. Environmental Data Initiative.
+//   https://doi.org/10.6073/pasta/659e43f4796f71e3a37673a0f2d7a77a
+// Rows with lakeid "TR" and chlor >= 0 (103 negative readings dropped),
+// 735 sample dates, 1981-2024. For each month, the median at each
+// regularly sampled depth (0, 3, 5, 8, 10, 15, 20, 27, 32 m), linearly
+// interpolated onto the model's 2 m patches (0, 2, ... 32 m). Medians
+// keep a few extreme readings (up to 307 μg/L) from skewing the profile.
+// December has one sample date, so it is the average of Nov and Jan.
+// One value per model patch, shallowest first.
+const CHL_BY_MONTH = {
+  1: [2.10, 2.63, 2.65, 2.20, 1.80, 1.70, 1.42, 1.14, 0.98, 0.94, 0.90, 0.91, 0.93, 0.94, 0.98, 1.04, 1.10],
+  2: [0.85, 1.38, 1.60, 1.38, 1.05, 0.90, 0.76, 0.62, 0.54, 0.52, 0.50, 0.47, 0.44, 0.41, 0.40, 0.40, 0.40],
+  3: [0.80, 1.27, 1.55, 1.53, 1.40, 1.40, 1.12, 0.84, 0.64, 0.52, 0.40, 0.46, 0.51, 0.57, 0.64, 0.72, 0.80],
+  4: [3.65, 3.75, 3.85, 3.83, 3.70, 4.00, 3.92, 3.84, 3.78, 3.74, 3.70, 3.69, 3.67, 3.66, 3.64, 3.62, 3.60],
+  5: [4.10, 4.50, 4.80, 5.17, 5.70, 6.10, 5.74, 5.38, 5.04, 4.72, 4.40, 4.27, 4.14, 4.01, 4.06, 4.28, 4.50],
+  6: [1.70, 1.90, 2.15, 2.83, 3.90, 5.00, 4.50, 4.00, 3.46, 2.88, 2.30, 2.16, 2.01, 1.87, 1.88, 2.04, 2.20],
+  7: [1.50, 1.70, 1.95, 2.40, 3.00, 4.35, 4.15, 3.95, 3.40, 2.50, 1.60, 1.34, 1.09, 0.83, 0.74, 0.82, 0.90],
+  8: [2.20, 2.27, 2.35, 2.57, 2.90, 4.00, 4.12, 4.24, 3.76, 2.68, 1.60, 1.31, 1.03, 0.74, 0.62, 0.66, 0.70],
+  9: [2.90, 3.03, 3.10, 3.10, 3.10, 3.50, 3.46, 3.42, 3.07, 2.41, 1.75, 1.45, 1.15, 0.85, 0.68, 0.64, 0.60],
+  10: [3.60, 3.87, 3.90, 3.77, 3.70, 3.60, 3.56, 3.52, 3.09, 2.27, 1.45, 1.18, 0.91, 0.64, 0.50, 0.50, 0.50],
+  11: [4.10, 4.10, 4.00, 3.93, 4.00, 3.80, 3.86, 3.92, 3.94, 3.92, 3.90, 3.94, 3.99, 4.03, 3.98, 3.84, 3.70],
+  12: [3.10, 3.36, 3.32, 3.07, 2.90, 2.75, 2.64, 2.53, 2.46, 2.43, 2.40, 2.42, 2.46, 2.49, 2.48, 2.44, 2.40],
+};
+// median over every sample date, for drawings with no date
+const CHL_ALL_DATES = [2.40, 2.67, 2.80, 2.97, 3.30, 3.90, 3.82, 3.74, 3.34, 2.62, 1.90, 1.66, 1.41, 1.17, 1.08, 1.14, 1.20];
+
+
 const minCircleDiameter = 2.5; // size at `critical` (smallest Daphnia)
 const maxCircleDiameter = 11;  // size at `capacity` (largest Daphnia)
 
@@ -406,8 +437,9 @@ let daphniaIndividuals; // each: {size, diameter, xFrac, yJitterFrac, prevDepth,
 //                 current time, updated every minute
 // What only feeds the picture: wind (surface ripple), and the readout
 // panel (air temp, DO, conductivity when the sensors report).
-// What the buoy can't supply: chlorophyll, predators, food probability -
-// those stay at the May 1992 values.
+// What the buoy can't supply: chlorophyll comes from the NTL-LTER monthly
+// median profile (CHL_BY_MONTH); predators and food probability stay at
+// the May 1992 values.
 // ------------------------------------------------------------
 
 const BUOY_EXPORT_URL = "https://buoy-export-proxy.uwcfl.workers.dev/Trout";
@@ -716,9 +748,12 @@ function profileTempAt(profile, depth) {
   return profile[profile.length - 1].temp;
 }
 
+//chlorophyll: the buoy has no chlorophyll sensor, so this uses the
+//NTL-LTER median profile for the current month (see CHL_BY_MONTH)
 function buildLiveData() {
-  if (!live.profile) return trmay92_df.map(row => ({ ...row }));
-  return trmay92_df.map(row => ({ ...row, temp: profileTempAt(live.profile, row.depth) }));
+  const chl = CHL_BY_MONTH[currentMonth];
+  if (!live.profile) return trmay92_df.map((row, i) => ({ ...row, chl: chl[i] }));
+  return trmay92_df.map((row, i) => ({ ...row, temp: profileTempAt(live.profile, row.depth), chl: chl[i] }));
 }
 
 function recompute(isFirstRun) {
@@ -1108,7 +1143,7 @@ function drawSizeLegend() {
     " in the lake (" + populationSize + " dots)", lakeLeft + 190, legendY);
   fill(255, 130);
   textSize(10.5);
-  text("Buoy: UW–Madison Center for Limnology (not quality controlled). Population: NTL-LTER zooplankton ver 42. Chlorophyll & predators: May 1992 profile.", lakeLeft, height - 14);
+  text("Buoy: UW–Madison Center for Limnology (not quality controlled). Population: NTL-LTER zooplankton ver 42. Chlorophyll: NTL-LTER ver 33, monthly median. Predators: May 1992 profile.", lakeLeft, height - 14);
 }
 
 </script>
