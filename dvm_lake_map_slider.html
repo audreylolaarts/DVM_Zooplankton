@@ -277,11 +277,66 @@ function dvmsimulation(n_timesteps, critical, capacity, data, depth, food_prob, 
 // light & temperature readings instead of a scripted day/night cycle
 // ============================================================
 
-// Number of dots drawn. This is a visual sample, not a literal head count:
-// a real lake holds billions of Daphnia (densities are reported per liter
-// in the NTL-LTER zooplankton dataset - see index.html for the citation).
-// 600 dots splits evenly into 50 per size class (12 classes, 5-60 μg).
-const populationSize = 600;
+// ---- population, from field data ------------------------------------
+// Daphnia density in Trout Lake from:
+//   NTL LTER, E.H. Stanley, S.R. Carpenter, and J.J. Magnuson. 2026.
+//   North Temperate Lakes LTER: Zooplankton - Trout Lake Area 1982 -
+//   current ver 42. Environmental Data Initiative.
+// Rows with lakeid "TR" and species_name starting with "DAPHNIA" (all
+// Daphnia species; Ceriodaphnia excluded), summed per sample date, with
+// dates that found no Daphnia counted as 0. 402 sample dates, 1981-2025.
+// Values are individuals per liter, lake-wide (volume-integrated).
+// December has no samples; it is the average of November and January.
+const DAPHNIA_PER_L_BY_MONTH = {
+  1: 0.19, 2: 0.55, 3: 0.19, 4: 0.61, 5: 1.50, 6: 7.13,
+  7: 6.18, 8: 3.24, 9: 2.96, 10: 3.42, 11: 1.86, 12: 1.03,
+};
+const DAPHNIA_PER_L_ALL_DATES = 3.09; // mean over every sample date
+
+// Size mix: share of Daphnia in each model size class (μg), from the
+// dataset's avg_length (mm; values >5 are μm, from 2023 on, and were
+// divided by 1000), converted to weight with the model's own allometry
+// W = 10.674 * L^2.093, rounded to the nearest 5 μg class (classes below
+// 5 μg folded into 5), weighted by density. 378 measured rows, 1990-2025.
+// The field population is mostly small: no measured averages reach 25 μg.
+const SIZE_SHARE = { 5: 0.8477, 10: 0.1304, 15: 0.0201, 20: 0.0018 };
+// avg_length is an average per species per date, which hides the larger
+// adults in each sample, so every model class gets at least this share of
+// the dots to stay visible. Set to 0 to draw the measured mix exactly.
+const SIZE_SHARE_FLOOR = 0.01;
+
+// Trout Lake volume: 0.240 km^3 = 2.40e11 L (Wisconsin DNR lake data)
+const LAKE_VOLUME_L = 2.40e11;
+
+// Scale: dots drawn per (Daphnia per liter). At 200, each dot stands for
+// about 2.40e11 / 200 = 1.2 billion Daphnia in the whole lake.
+const DOTS_PER_DENSITY = 200;
+const DAPHNIA_PER_DOT = LAKE_VOLUME_L / DOTS_PER_DENSITY;
+
+//splits `total` dots across the model's size classes by SIZE_SHARE (with
+//the floor), using largest-remainder rounding so the counts add up exactly
+function allocateDots(total, sizes) {
+  const raw = sizes.map(s => Math.max(SIZE_SHARE[s] || 0, SIZE_SHARE_FLOOR));
+  const sum = raw.reduce((a, b) => a + b, 0);
+  const exact = raw.map(r => (r / sum) * total);
+  const counts = exact.map(Math.floor);
+  let left = total - counts.reduce((a, b) => a + b, 0);
+  exact.map((e, i) => [e - Math.floor(e), i]).sort((a, b) => b[0] - a[0])
+    .slice(0, left).forEach(([, i]) => counts[i]++);
+  return counts;
+}
+
+//"820 billion", "1.2 billion"
+function bigNumber(n) {
+  if (n >= 1e12) return (n / 1e12).toFixed(n >= 1e13 ? 0 : 1) + " trillion";
+  if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 0 : 1) + " billion";
+  return Math.round(n / 1e6) + " million";
+}
+
+// The slider drawing has no date, so it uses the all-dates average.
+const populationDensity = DAPHNIA_PER_L_ALL_DATES;
+const populationLabel = "Trout Lake average";
+const populationSize = Math.round(populationDensity * DOTS_PER_DENSITY);
 
 const minCircleDiameter = 2.5; // size at `critical` (smallest Daphnia)
 const maxCircleDiameter = 11;  // size at `capacity` (largest Daphnia)
@@ -469,7 +524,7 @@ function recompute(isFirstRun) {
   const now = millis();
 
   if (isFirstRun) {
-    const counts = evenSplit(populationSize, final.length);
+    const counts = allocateDots(populationSize, final.map(r => r.Size));
     daphniaIndividuals = [];
     final.forEach((row, i) => {
       const diameter = map(row.Size, critical, capacity, minCircleDiameter, maxCircleDiameter);
@@ -502,15 +557,6 @@ function recompute(isFirstRun) {
   lastSimLight = light;
   lastSimTemp = tempOffset;
   updateLayout();
-}
-
-//splits `total` individuals as evenly as possible across `n` groups
-function evenSplit(total, n) {
-  const base = Math.floor(total / n);
-  const remainder = total % n;
-  const counts = new Array(n).fill(base);
-  for (let i = 0; i < remainder; i++) counts[i] += 1;
-  return counts;
 }
 
 //a Daphnia's interpolated depth right now, easing from prevDepth to
@@ -786,6 +832,13 @@ function drawSizeLegend() {
   textAlign(LEFT, CENTER);
   text(critical + " μg", lakeLeft + 26, legendY);
   text(capacity + " μg", lakeLeft + 120, legendY);
+  // population key
+  fill(255, 190);
+  textSize(11.5);
+  textAlign(LEFT, CENTER);
+  text("Each dot ≈ " + bigNumber(DAPHNIA_PER_DOT) + " Daphnia  ·  " + populationLabel + ": " +
+    populationDensity.toFixed(1) + " per liter ≈ " + bigNumber(populationDensity * LAKE_VOLUME_L) +
+    " in the lake (" + populationSize + " dots)", lakeLeft + 190, legendY);
 }
 
 </script>
