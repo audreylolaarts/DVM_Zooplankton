@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sources · Zooplankton Diel Vertical Migration</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --ink: #000000;
+    --muted: #555555;
+    --line: rgba(191, 227, 255, 0.18);
+    --accent: #bfe3ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 56px 20px 72px; }
+  .back { color: var(--muted); text-decoration: none; font-size: 15px; font-style: italic; }
+  .back:hover, .back:focus-visible { color: var(--accent); text-decoration: underline; }
+  h1 { font-weight: 600; font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 22px 0 10px; letter-spacing: -0.01em; }
+  /* links stay black and underlined so they read on white; accent on hover */
+  a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+  a:hover, a:focus-visible { color: var(--accent); }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 15px; color: var(--muted); }
+  .lede { margin: 0 0 36px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; margin: 44px 0 6px; }
+  .src { border-top: 1px solid var(--line); padding: 16px 0; }
+  .src h3 { margin: 0 0 4px; font-size: 20px; font-weight: 600; }
+  .cite { margin: 0; font-size: 16px; }
+  .use { margin: 6px 0 0; font-size: 15.5px; color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← Zooplankton Diel Vertical Migration</a>
+  <h1>Sources</h1>
+  <p class="lede">The model and every dataset behind the drawings, with what each one is used for. The long-term datasets come from the North Temperate Lakes Long-Term Ecological Research program (NTL-LTER), run by the UW–Madison Center for Limnology at Trout Lake Station.</p>
+
+  <h2>Model</h2>
+  <div class="src">
+    <h3>DaphniaDVM</h3>
+    <p class="cite">McAfee, B. J. 2021. Programming Simulations of Diel Vertical Migration Behavior of Zooplankton. Lawrence University Honors Projects 157. <a href="https://lux.lawrence.edu/luhp/157">https://lux.lawrence.edu/luhp/157</a></p>
+    <p class="use">The model behind all three drawings, ported to JavaScript with the author's permission. Builds on De Stasio et al. (1993) and the dynamic programming approach of Mangel &amp; Clark (1988). As in the original, each size class is spread around its optimal depth as a normal distribution with a standard deviation of 3.84 m. Its May 1992 Trout Lake example profile supplies the fish layer for years before sonar surveys began.</p>
+  </div>
+
+  <h2>Live data</h2>
+  <div class="src">
+    <h3>Trout Lake buoy</h3>
+    <p class="cite">UW–Madison Center for Limnology. Trout Lake Buoy Live Data. <a href="https://uwcfl.github.io/buoy-viewer/trout.html">https://uwcfl.github.io/buoy-viewer/trout.html</a></p>
+    <p class="use">Live Buoy Data: water temperature from 0 to 30 m, wind and air temperature, refreshed about every 10 minutes. Real-time data, not quality controlled.</p>
+  </div>
+
+  <h2>Long-term Trout Lake data (NTL-LTER, Environmental Data Initiative)</h2>
+  <div class="src">
+    <h3>Zooplankton</h3>
+    <p class="cite">NTL LTER, E.H. Stanley, S.R. Carpenter, and J.J. Magnuson. 2026. North Temperate Lakes LTER: Zooplankton – Trout Lake Area 1982 – current ver 42. Environmental Data Initiative.</p>
+    <p class="use">Daphnia density (all species, 402 sample dates, 1981–2025) sets how many dots and notes there are; measured body lengths set the size mix. Each dot stands for about 1.2 billion Daphnia.</p>
+  </div>
+  <div class="src">
+    <h3>Water temperature</h3>
+    <p class="cite">Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2026. North Temperate Lakes LTER: Physical Limnology of Primary Study Lakes 1981 – current ver 38. Environmental Data Initiative. <a href="https://doi.org/10.6073/pasta/eeaa2a029eda1683f004d06da5d8d808">https://doi.org/10.6073/pasta/eeaa2a029eda1683f004d06da5d8d808</a> (Accessed 2026-10-09).</p>
+    <p class="use">Temperature by depth, week by week, for Lake Through Time and Lake in Sound.</p>
+  </div>
+  <div class="src">
+    <h3>Chlorophyll</h3>
+    <p class="cite">Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2025. North Temperate Lakes LTER: Chlorophyll – Trout Lake Area 1981 – current ver 33. Environmental Data Initiative. <a href="https://doi.org/10.6073/pasta/659e43f4796f71e3a37673a0f2d7a77a">https://doi.org/10.6073/pasta/659e43f4796f71e3a37673a0f2d7a77a</a> (Accessed 2026-10-09).</p>
+    <p class="use">Food for the Daphnia. Median chlorophyll by depth for the current month in Live Buoy Data; week-by-week profiles in Lake Through Time and Lake in Sound.</p>
+  </div>
+  <div class="src">
+    <h3>Fish</h3>
+    <p class="cite">Magnuson, J., S. Carpenter, and E. Stanley. 2025. North Temperate Lakes LTER: Pelagic Prey – Sonar Data 2001 – current ver 36. Environmental Data Initiative. <a href="https://doi.org/10.6073/pasta/7ba35a0a5f23fd0fcc7039187a0fbd91">https://doi.org/10.6073/pasta/7ba35a0a5f23fd0fcc7039187a0fbd91</a> (Accessed 2026-10-09).</p>
+    <p class="use">Zooplankton-eating fish per 1,000 m³ by depth (the model's predator units), from the Interval Density table: Trout Lake south basin, one midsummer night survey per year. The 2020–2024 average for Live Buoy Data; each year's own survey for Lake Through Time and Lake in Sound.</p>
+  </div>
+  <div class="src">
+    <h3>Ice</h3>
+    <p class="cite">Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2026. North Temperate Lakes LTER: Ice Duration – Trout Lake Area 1981 – current ver 32. Environmental Data Initiative. <a href="https://doi.org/10.6073/pasta/d2c65ae81f95dd29cc6568344621680c">https://doi.org/10.6073/pasta/d2c65ae81f95dd29cc6568344621680c</a> (Accessed 2026-10-09).</p>
+    <p class="use">Ice-on and ice-off dates for each winter in the timeline drawings.</p>
+  </div>
+  <div class="src">
+    <h3>Wind and sunlight</h3>
+    <p class="cite">Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2026. North Temperate Lakes LTER: Meteorological Data – Woodruff Airport 1989 – current ver 41. Environmental Data Initiative. <a href="https://doi.org/10.6073/pasta/ef5fbb5faa65e57449de0faeff8b497f">https://doi.org/10.6073/pasta/ef5fbb5faa65e57449de0faeff8b497f</a> (Accessed 2026-10-09).</p>
+    <p class="use">Hourly sunlight (PAR) and wind for the timeline drawings. Before 1989, light is estimated from the sun's position and wind is typical for the season.</p>
+  </div>
+
+  <h2>Other</h2>
+  <div class="src">
+    <h3>Lake volume</h3>
+    <p class="cite">Wisconsin Department of Natural Resources, lake data for Trout Lake (Vilas County): 0.240 km³.</p>
+    <p class="use">Turns Daphnia per liter into a whole-lake estimate.</p>
+  </div>
+  <div class="src">
+    <h3>Piano</h3>
+    <p class="cite">Holm, A. Salamander Grand Piano V3 (Yamaha C5). <a href="https://creativecommons.org/licenses/by/3.0/">CC-BY 3.0</a>, via the <a href="https://github.com/Tonejs/audio">Tone.js audio collection</a>.</p>
+    <p class="use">The piano samples in Lake in Sound.</p>
+  </div>
+
+  <footer>Made during the 2026 Drawing Water residency at Trout Lake Station. See also the <a href="context.html">explanation</a>.</footer>
+</main>
+</body>
+</html>
