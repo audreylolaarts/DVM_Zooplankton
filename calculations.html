@@ -14,10 +14,6 @@
     --muted: #555555;
     --line: rgba(191, 227, 255, 0.18);
     --accent: #bfe3ff;
-    /* chart colours: day and night, readable on white */
-    --day: #b8741a;
-    --night: #1f5f8b;
-    --grid: rgba(0, 0, 0, 0.08);
   }
   * { box-sizing: border-box; }
   body {
@@ -55,10 +51,6 @@
   figure { margin: 22px 0 26px; }
   figure svg { display: block; width: 100%; height: auto; }
   figcaption { font-size: 15px; font-style: italic; color: var(--muted); margin-top: 6px; }
-  .key { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 15px; margin-bottom: 4px; }
-  .key span::before { content: ""; display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 6px; border-top: 2px solid currentColor; }
-  .key .dash::before { border-top-style: dashed; }
-  .day { color: var(--day); } .night { color: var(--night); }
 
   table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; font-size: 16px; }
   th, td { text-align: left; padding: 6px 10px 6px 0; vertical-align: top; }
@@ -74,7 +66,6 @@
   <a class="back" href="index.html">← Zooplankton Diel Vertical Migration</a>
   <h1>The Calculations</h1>
   <p class="lede">Bennett McAfee's DaphniaDVM model, step by step: the equations that decide, for every size of Daphnia, which depth of the lake gives it the best chance of surviving the next six hours.</p>
-  <p class="note">Every chart on this page is calculated live in your browser by the same code that drives the drawings, using McAfee's own example: Trout Lake in May 1992, at noon (full sun) and at midnight.</p>
   <nav class="toc" aria-label="On this page">
     <a href="#overview">Overview</a>
     <a href="#size">Size</a>
@@ -105,11 +96,6 @@
   <p>Sunlight at the surface, <i>I</i><sub>0</sub>, is absorbed by the water as it goes down. Each layer keeps the same fraction of the light above it, so light falls off exponentially.</p>
   <div class="eq" data-tex="I_i = I_0 \, e^{-k \cdot 2 \cdot d_i}"></div>
   <dl class="terms"><dt><i>I</i><sub>0</sub></dt><dd>surface light (µmol/m²/s): about 1,950 at noon, 0.15 at night in this example</dd><dt><i>k</i></dt><dd>light extinction coefficient, 0.48</dd><dt><i>d<sub>i</sub></i></dt><dd>depth of layer <i>i</i> (m)</dd></dl>
-  <figure>
-    <div class="key"><span class="day">noon</span><span class="night">midnight</span></div>
-    <svg id="chartLight" viewBox="0 0 720 300" role="img" aria-label="Light by depth at noon and midnight, log scale"></svg>
-    <figcaption>Light at each depth, on a logarithmic scale. At noon, light at 10 m is already a tiny fraction of the surface; at midnight it is almost nothing everywhere. The factor of 2 matches McAfee's code.</figcaption>
-  </figure>
 
   <h2 id="risk"><span class="step">Step 3</span>The chance of being eaten</h2>
   <p>Fish hunt by sight. How far away a fish can spot a Daphnia, its <em>reactive distance</em>, grows with the Daphnia's length and with the light, but levels off in bright light.</p>
@@ -127,11 +113,6 @@
     <dt><i>P</i></dt><dd>fish in the layer, per 1,000 m³ (from sonar surveys)</dd>
     <dt>β</dt><dd>probability of being eaten in one time step</dd>
   </dl>
-  <figure>
-    <div class="key"><span class="day">noon</span><span class="night">midnight</span><span class="dash" style="color:var(--ink)">60 μg (dashed)</span><span style="color:var(--ink)">5 μg (solid)</span></div>
-    <svg id="chartRisk" viewBox="0 0 720 350" role="img" aria-label="Predation risk by depth for small and large Daphnia at noon and midnight"></svg>
-    <figcaption>Predation risk by depth. At noon, risk peaks where the fish are, 12–16 m (grey bars), and is slightly higher for large Daphnia than small ones. At midnight the danger almost vanishes.</figcaption>
-  </figure>
 
   <h2 id="energy"><span class="step">Step 4</span>Energy spent and energy gained</h2>
   <p>Staying alive costs energy, and warmer water makes it cost more. Metabolic cost per time step rises with body weight and roughly doubles for every 10 °C:</p>
@@ -144,11 +125,6 @@
     <dt><i>A</i></dt><dd>assimilation efficiency, 0.6</dd>
     <dt>α, Υ</dt><dd>energy lost and gained in one time step (μg)</dd>
   </dl>
-  <figure>
-    <div class="key"><span style="color:var(--night)">energy gained, Υ</span><span class="dash" style="color:var(--day)">energy spent, α</span></div>
-    <svg id="chartEnergy" viewBox="0 0 720 300" role="img" aria-label="Energy gained and spent by depth for a 30 microgram Daphnia"></svg>
-    <figcaption>Energy for a 30 μg Daphnia in each layer. The warm, algae-rich upper water pays best but also costs most; the cold deep water costs little and pays little.</figcaption>
-  </figure>
 
   <h2 id="fitness"><span class="step">Step 5</span>Looking ahead: fitness</h2>
   <p>Each time step is 30 minutes. In a layer, a Daphnia either finds food, with probability λ, and ends up at weight <i>x′</i>, or finds none and ends up at <i>x″</i>. Below 5 μg it starves:</p>
@@ -163,13 +139,8 @@
   <p>The model solves this backward, from the last of 12 time steps (six hours ahead) to the present. At each step, each size takes the best layer's fitness. Weights between the 5 μg classes are interpolated, so even small gains and losses count.</p>
 
   <h2 id="choice"><span class="step">Step 6</span>Choosing a depth</h2>
-  <p>The best depth for each size is the layer with the highest fitness. Ties go to the shallower layer.</p>
+  <p>The best depth for each size is the layer with the highest fitness. Ties go to the shallower layer. The table shows the result for McAfee's own example, Trout Lake in May 1992, calculated live in your browser by the same code that drives the drawings.</p>
   <div class="eq" data-tex="d^{*}(x) = \underset{i}{\arg\max}\; F_i(x, t)"></div>
-  <figure>
-    <div class="key"><span class="day">noon</span><span class="night">midnight</span></div>
-    <svg id="chartChoice" viewBox="0 0 720 360" role="img" aria-label="Optimal depth of each Daphnia size at noon and midnight"></svg>
-    <figcaption>The best depth for each size, calculated here for May 1992. Small Daphnia stay shallow; larger ones hide deep at noon, and many rise at midnight.</figcaption>
-  </figure>
   <div class="tablewrap"><table id="choiceTable">
     <thead><tr><th>Size (μg)</th><th class="num">Noon (m)</th><th class="num">Midnight (m)</th><th class="num">McAfee 2021, noon</th><th class="num">McAfee 2021, midnight</th></tr></thead>
     <tbody></tbody>
@@ -179,11 +150,6 @@
   <h2 id="spread"><span class="step">Step 7</span>From depths to a population</h2>
   <p>Real Daphnia don't all sit at exactly one depth. McAfee turns each size's best depth into a bell curve with a standard deviation of 3.84 m, measured from field data in Sparkling Lake. The curves for all sizes are added together. The drawings do the same, weighting each size by how common it is in the Trout Lake samples.</p>
   <div class="eq" data-tex="n(d) \;\propto\; \sum_{x} w_x \, \exp\!\left( -\frac{(d - d^{*}(x))^2}{2 \cdot 3.84^2} \right)"></div>
-  <figure>
-    <div class="key"><span class="day">noon</span><span class="night">midnight</span></div>
-    <svg id="chartSpread" viewBox="0 0 720 320" role="img" aria-label="Predicted share of Daphnia by depth at noon and midnight"></svg>
-    <figcaption>The predicted population by depth, with all sizes counted equally as in McAfee's thesis. At midnight more of the population moves into the upper water.</figcaption>
-  </figure>
 
   <h2 id="constants"><span class="step">Reference</span>Constants</h2>
   <div class="tablewrap"><table>
@@ -471,20 +437,16 @@ function dvmsimulation(n_timesteps, critical, capacity, data, depth, food_prob, 
 }
 
 // ---------------------------------------------------------------
-// Charts: computed live from the model above, McAfee's May 1992
-// Trout Lake example, noon (full sun) and midnight
+// Optimal depths for McAfee's May 1992 Trout Lake example, noon (full
+// sun) and midnight, computed live and compared with his thesis
 // ---------------------------------------------------------------
 const NOON = light_day, NIGHT = light_night;
 const DATA = trmay92_df;
-const DEPTHS = DATA.map(r => r.depth);
 const SIZES = []; for (let s = critical; s <= capacity; s += 5) SIZES.push(s);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const NS = "http://www.w3.org/2000/svg";
 const FONT = "'Cormorant Garamond', serif";
 
-function patchesFor(x, light) {
-  return get_patches(DATA, "depth", "food_prob", "predators", "chl", "temp", k, light, x);
-}
 function finalDepths(light) {
   const r = dvmsimulation(n_timesteps, critical, capacity, DATA, "depth", "food_prob", "predators", "chl", "temp", k, light);
   return r.filter(o => o.Timestep === n_timesteps).map(o => o.Depth);
@@ -499,92 +461,12 @@ function el(svg, tag, attrs, text) {
 }
 
 // a horizontal-value, depth-down chart (depth on the y axis like the lake)
-function depthChart(id, { xMax, xMin = 0, log = false, xLabel, ticks, tickFmt, series, bars }) {
-  const svg = document.getElementById(id);
-  const vb = svg.viewBox.baseVal;
-  const W = vb.width, H = vb.height, L = 70, R = 20, T = bars ? 28 : 18, B = 46;
-  const pw = W - L - R, ph = H - T - B;
-  const xs = v => log ? L + (Math.log10(Math.max(v, xMin)) - Math.log10(xMin)) / (Math.log10(xMax) - Math.log10(xMin)) * pw
-                      : L + (v - xMin) / (xMax - xMin) * pw;
-  const ys = d => T + d / 32 * ph;
-  // grid + axes
-  for (const d of [0, 8, 16, 24, 32]) {
-    el(svg, "line", { x1: L, x2: W - R, y1: ys(d), y2: ys(d), stroke: css("--grid") });
-    el(svg, "text", { x: L - 10, y: ys(d) + 5, "text-anchor": "end", "font-size": 15, "font-family": FONT, fill: css("--muted") }, d + " m");
-  }
-  for (const t of ticks) {
-    el(svg, "line", { x1: xs(t), x2: xs(t), y1: T, y2: T + ph, stroke: css("--grid") });
-    el(svg, "text", { x: xs(t), y: H - B + 20, "text-anchor": "middle", "font-size": 14, "font-family": FONT, fill: css("--muted") }, tickFmt ? tickFmt(t) : t.toLocaleString());
-  }
-  el(svg, "text", { x: L + pw / 2, y: H - 6, "text-anchor": "middle", "font-size": 15, "font-style": "italic", "font-family": FONT, fill: css("--muted") }, xLabel);
-  if (bars) {
-    const bmax = Math.max(...bars.values);
-    bars.values.forEach((v, i) => {
-      const w = v / bmax * pw * 0.35;
-      el(svg, "rect", { x: W - R - w, y: ys(DEPTHS[i]) - ph / 34 * 0.8, width: w, height: ph / 17 * 0.8, fill: "rgba(0,0,0,0.07)" });
-    });
-    el(svg, "text", { x: W - R, y: T - 5, "text-anchor": "end", "font-size": 14, "font-style": "italic", "font-family": FONT, fill: css("--muted") }, bars.label);
-  }
-  for (const s of series) {
-    const pts = s.values.map((v, i) => xs(v).toFixed(1) + "," + ys(DEPTHS[i]).toFixed(1)).join(" ");
-    el(svg, "polyline", { points: pts, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-dasharray": s.dash ? "6 5" : "none", "stroke-linejoin": "round" });
-    s.values.forEach((v, i) => el(svg, "circle", { cx: xs(v), cy: ys(DEPTHS[i]), r: 2.6, fill: s.color }));
-  }
-}
-
-function drawLight() {
-  const day = DEPTHS.map(d => NOON * Math.exp(-k * 2 * d));
-  const night = DEPTHS.map(d => NIGHT * Math.exp(-k * 2 * d));
-  depthChart("chartLight", { log: true, xMin: 1e-15, xMax: 3000, xLabel: "light, µmol/m²/s (log scale)",
-    ticks: [1e-15, 1e-10, 1e-5, 1, 1000],
-    tickFmt: t => ({ 1e-15: "10⁻¹⁵", 1e-10: "10⁻¹⁰", 1e-5: "10⁻⁵", 1: "1", 1000: "1,000" })[t],
-    series: [{ values: day, color: css("--day") }, { values: night, color: css("--night") }] });
-}
-
-function drawRisk() {
-  const beta = (x, light) => patchesFor(x, light).sort((a, b) => a.patch - b.patch).map(p => p.Beta);
-  const all = [beta(5, NOON), beta(60, NOON), beta(5, NIGHT), beta(60, NIGHT)];
-  const xMax = Math.max(...all.flat()) * 1.05;
-  depthChart("chartRisk", { xMax, xLabel: "chance of being eaten in one 30-minute step, β",
-    ticks: [0, xMax / 4, xMax / 2, 3 * xMax / 4].map(v => +v.toPrecision(2)),
-    bars: { values: DATA.map(r => r.predators), label: "fish per 1,000 m³ (grey bars)" },
-    series: [
-      { values: all[0], color: css("--day") }, { values: all[1], color: css("--day"), dash: true },
-      { values: all[2], color: css("--night") }, { values: all[3], color: css("--night"), dash: true },
-    ] });
-}
-
-function drawEnergy() {
-  const p = patchesFor(30, NOON).sort((a, b) => a.patch - b.patch);
-  const gain = p.map(o => o.Upsilon), cost = p.map(o => o.Alpha);
-  const xMax = Math.max(...gain, ...cost) * 1.1;
-  depthChart("chartEnergy", { xMax, xLabel: "μg per 30-minute step",
-    ticks: [0, xMax / 3, 2 * xMax / 3].map(v => +v.toPrecision(2)),
-    series: [{ values: gain, color: css("--night") }, { values: cost, color: css("--day"), dash: true }] });
-}
-
 const THESIS_NOON = [4, 18, 32, 22, 32, 30, 32, 30, 32, 30, 30, 30];
 const THESIS_NIGHT = [6, 8, 32, 16, 32, 18, 32, 20, 32, 24, 24, 24];
 let noonD, nightD;
 
-function drawChoice() {
+function fillChoiceTable() {
   noonD = finalDepths(NOON); nightD = finalDepths(NIGHT);
-  const svg = document.getElementById("chartChoice");
-  const W = 720, H = 360, L = 70, R = 20, T = 18, B = 46, pw = W - L - R, ph = H - T - B;
-  const xs = i => L + (i + 0.5) / SIZES.length * pw;
-  const ys = d => T + d / 32 * ph;
-  for (const d of [0, 8, 16, 24, 32]) {
-    el(svg, "line", { x1: L, x2: W - R, y1: ys(d), y2: ys(d), stroke: css("--grid") });
-    el(svg, "text", { x: L - 10, y: ys(d) + 5, "text-anchor": "end", "font-size": 15, "font-family": FONT, fill: css("--muted") }, d + " m");
-  }
-  SIZES.forEach((s, i) => {
-    el(svg, "text", { x: xs(i), y: H - B + 20, "text-anchor": "middle", "font-size": 14, "font-family": FONT, fill: css("--muted") }, s);
-    if (noonD[i] !== nightD[i]) el(svg, "line", { x1: xs(i), x2: xs(i), y1: ys(noonD[i]), y2: ys(nightD[i]), stroke: "rgba(0,0,0,0.25)", "stroke-width": 1.2, "marker-end": "" });
-    const r = 3 + (s - 5) / 55 * 6;
-    el(svg, "circle", { cx: xs(i) - 6, cy: ys(noonD[i]), r, fill: css("--day") });
-    el(svg, "circle", { cx: xs(i) + 6, cy: ys(nightD[i]), r, fill: "none", stroke: css("--night"), "stroke-width": 2 });
-  });
-  el(svg, "text", { x: L + pw / 2, y: H - 6, "text-anchor": "middle", "font-size": 15, "font-style": "italic", "font-family": FONT, fill: css("--muted") }, "Daphnia size (μg) — filled: noon · open: midnight");
 
   const tb = document.querySelector("#choiceTable tbody");
   let same = 0;
@@ -598,30 +480,6 @@ function drawChoice() {
   document.getElementById("choiceNote").textContent =
     same === 24 ? "This page's calculation matches all 24 optimal depths in Table 1 of McAfee's thesis, which shows the JavaScript port reproduces the original R model."
                 : `This page's calculation matches ${same} of the 24 optimal depths in Table 1 of McAfee's thesis.`;
-}
-
-function drawSpread() {
-  const grid = []; for (let d = 0; d <= 32; d += 0.5) grid.push(d);
-  const curve = depths => {
-    const v = grid.map(d => depths.reduce((s, m) => s + Math.exp(-((d - m) ** 2) / (2 * 3.84 ** 2)), 0));
-    const sum = v.reduce((a, b) => a + b, 0);
-    return v.map(x => x / sum);
-  };
-  const day = curve(noonD), night = curve(nightD);
-  const svg = document.getElementById("chartSpread");
-  const W = 720, H = 320, L = 70, R = 20, T = 18, B = 46, pw = W - L - R, ph = H - T - B;
-  const xMax = Math.max(...day, ...night) * 1.1;
-  const xs = v => L + v / xMax * pw, ys = d => T + d / 32 * ph;
-  for (const d of [0, 8, 16, 24, 32]) {
-    el(svg, "line", { x1: L, x2: W - R, y1: ys(d), y2: ys(d), stroke: css("--grid") });
-    el(svg, "text", { x: L - 10, y: ys(d) + 5, "text-anchor": "end", "font-size": 15, "font-family": FONT, fill: css("--muted") }, d + " m");
-  }
-  for (const [vals, col] of [[day, css("--day")], [night, css("--night")]]) {
-    const pts = vals.map((v, i) => xs(v).toFixed(1) + "," + ys(grid[i]).toFixed(1));
-    el(svg, "polygon", { points: L + "," + ys(0) + " " + pts.join(" ") + " " + L + "," + ys(32), fill: col, "fill-opacity": 0.12, stroke: "none" });
-    el(svg, "polyline", { points: pts.join(" "), fill: "none", stroke: col, "stroke-width": 2 });
-  }
-  el(svg, "text", { x: L + pw / 2, y: H - 6, "text-anchor": "middle", "font-size": 15, "font-style": "italic", "font-family": FONT, fill: css("--muted") }, "share of the population →");
 }
 
 // ---------------------------------------------------------------
@@ -689,11 +547,7 @@ function renderEquations() {
 }
 
 drawFlow();
-drawLight();
-drawRisk();
-drawEnergy();
-drawChoice();
-drawSpread();
+fillChoiceTable();
 window.addEventListener("load", renderEquations);
 </script>
 </body>
