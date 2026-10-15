@@ -164,20 +164,6 @@
   .desc { color: var(--muted); font-size: 14.5px; display: block; margin: 2px auto 0; max-width: 560px; }
 </style>
 </head>
-  <script>
-  const front = document.querySelector('.front');
-  let mx = -999, my = -999;
-
-  function update() {
-    const r = front.getBoundingClientRect();
-    front.style.setProperty('--x', (mx - r.left) + 'px');
-    front.style.setProperty('--y', (my - r.top) + 'px');
-  }
-
-  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; update(); });
-  addEventListener('scroll', update);   // keeps the hole under the cursor while scrolling
-  document.documentElement.addEventListener('pointerleave', () => { mx = my = -999; update(); });
-</script>
 <body>
  <div class="behind"></div>
  <div class="front">
@@ -227,4 +213,18 @@
     </div>
  </div>
 </body>
+  <script>
+  const front = document.querySelector('.front');
+  let mx = -999, my = -999;
+
+  function update() {
+    const r = front.getBoundingClientRect();
+    front.style.setProperty('--x', (mx - r.left) + 'px');
+    front.style.setProperty('--y', (my - r.top) + 'px');
+  }
+
+  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; update(); });
+  addEventListener('scroll', update);   // keeps the hole under the cursor while scrolling
+  document.documentElement.addEventListener('pointerleave', () => { mx = my = -999; update(); });
+</script>
 </html>
