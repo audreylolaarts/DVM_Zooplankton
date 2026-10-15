@@ -6,120 +6,6 @@
 <title>Zooplankton Diel Vertical Migration</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700&display=swap" rel="stylesheet">
 <style>
- .hoods-container {
-  position: fixed;
-  right: 1rem;
-  bottom: 0.1rem;
-  z-index: 9999;
-}
- .hoods-container img {
-  position: absolute;
-  width:90px;
-  display: block;
-  height: auto;
-}
-.hood1 {
-  height: auto;
- bottom:100px;
- right:20px;
- animation: boop1 40s infinite;
-}
- .hood2 {
-  right:80px;
-  height: auto;
-  bottom:100px;
-  animation: boop2 5s infinite;
-}
- .hood3 {
-  right:40px;
-  bottom:30px;
-  height: auto;
-  animation: boop3 1s infinite;
-}
- .hood4 {
-  right:150px;
-  bottom:30px;
-  height: auto;
-  animation: boop4 3s infinite;
-}
- .hood5 {
-  right:90px;
-  bottom:40px;
-  height: auto;
-  animation: boop5 6s infinite;
-}
- .hood6 {
-  right:160px;
-  bottom:110px;
-  height: auto;
-  animation: boop6 1s infinite;
-}
- @keyframes boop1{
-  0%{
-   transform: translateY(-2px);
-  }
-  100%{
-   transform: translateY(2px);
-  }
- }
-   @keyframes boop2{
-  0%{
-   transform: translateY(-3px);
-  }
-  100%{
-   transform: translateY(3px);
-  }
-   }
-  @keyframes boop3{
-  0%{
-   transform: translateY(-1px);
-  }
-  100%{
-   transform: translateY(1px);
-  }
-  }
-    @keyframes boop4{
-  0%{
-   transform: translateX(-1px);
-  }
-  100%{
-   transform: translateX(1px);
-  }
-    }
-  @keyframes boop5{
-  0%{
-   transform: translateY(-4px);
-  }
-  100%{
-   transform: translateY(4px);
-  }
-  }
-  @keyframes boop6{
-  0%{
-   transform: translateX(-1px);
-  }
-  100%{
-   transform: translateX(1px);
-  }
-  }
-  .behind {
-  position: fixed;
-  inset: 0;            /* fills the whole screen */
-  z-index: 0;
-  overflow: hidden;
-   background-color: black;
-}
-
-.front {
-  --x: -999px;         /* start the hole off-screen */
-  --y: -999px;
-  position: relative;
-  z-index: 1;
-  min-height: 100vh;
-  background: var(--bg);   /* must be solid, or you'll see through everywhere */
-  -webkit-mask-image: radial-gradient(circle 80px at var(--x) var(--y), transparent 90%, #000 100%);
-          mask-image: radial-gradient(circle 80px at var(--x) var(--y), transparent 90%, #000 100%);
- }
   :root {
     --bg: #FFFFFF;
     --ink: #000000;
@@ -131,11 +17,74 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--bg, #fff);
     color: var(--ink);
     font-family: 'Cormorant Garamond', serif;
     font-size: 16px;
   }
+
+  /* ---------- the microscope layer behind ---------- */
+  .behind {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: #000;
+  }
+  .critter {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: auto;
+    pointer-events: none;
+    user-select: none;
+    will-change: transform;
+  }
+
+  /* ---------- the white page on top, with a hole at the mouse ---------- */
+  .front {
+    --x: -9999px;
+    --y: -9999px;
+    --r: 0px;            /* hole radius, set by the script */
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    background: var(--bg, #fff);
+    -webkit-mask-image: radial-gradient(circle at var(--x) var(--y), transparent calc(var(--r) - 10px), #000 var(--r));
+            mask-image: radial-gradient(circle at var(--x) var(--y), transparent calc(var(--r) - 10px), #000 var(--r));
+  }
+
+  /* the hole replaces the cursor while it's open */
+  html.peeking, html.peeking * { cursor: none !important; }
+
+  /* ---------- hoods ---------- */
+  .hoods-container {
+    position: fixed;
+    right: 1rem;
+    bottom: 0.1rem;
+    z-index: 9999;
+  }
+  .hoods-container img {
+    position: absolute;
+    width: 90px;
+    display: block;
+    height: auto;
+  }
+  .hood1 { bottom: 100px; right: 20px;  animation: boop1 40s infinite; }
+  .hood2 { bottom: 100px; right: 80px;  animation: boop2 5s infinite; }
+  .hood3 { bottom: 30px;  right: 40px;  animation: boop3 1s infinite; }
+  .hood4 { bottom: 30px;  right: 150px; animation: boop4 3s infinite; }
+  .hood5 { bottom: 40px;  right: 90px;  animation: boop5 6s infinite; }
+  .hood6 { bottom: 110px; right: 160px; animation: boop6 1s infinite; }
+
+  @keyframes boop1 { 0% { transform: translateY(-2px); } 100% { transform: translateY(2px); } }
+  @keyframes boop2 { 0% { transform: translateY(-3px); } 100% { transform: translateY(3px); } }
+  @keyframes boop3 { 0% { transform: translateY(-1px); } 100% { transform: translateY(1px); } }
+  @keyframes boop4 { 0% { transform: translateX(-1px); } 100% { transform: translateX(1px); } }
+  @keyframes boop5 { 0% { transform: translateY(-4px); } 100% { transform: translateY(4px); } }
+  @keyframes boop6 { 0% { transform: translateX(-1px); } 100% { transform: translateX(1px); } }
+
+  /* ---------- page text ---------- */
   main { max-width: 680px; margin: 0 auto; padding: 72px 20px 56px; text-align: center; }
   h1 { font-weight: 600; font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 0 0 14px; letter-spacing: -0.01em; }
   .lede { margin: 0 0 40px; }
@@ -165,66 +114,176 @@
 </style>
 </head>
 <body>
- <div class="behind"></div>
- <div class="front">
-<main>
-  <h1>Zooplankton Diel Vertical Migration</h1>
-  <p class="lede">Each night Daphnia rise toward the surface to feed, and each morning they sink to hide from fish in the dark. These drawings run a dynamic fitness model of that daily migration for Trout Lake, Wisconsin.</p>
 
-  <div class="menus">
-    <details>
-      <summary>Drawings</summary>
-      <ol>
-        <li><a href="dvm_lake_live_data.html">
-          <span class="num">01</span>
-          <span><span class="name">Live Buoy Data</span>
-          <span class="desc">Driven by real-time temperature and light readings from the Trout Lake buoy, updated every few minutes.</span></span>
-        </a></li>
-        <li><a href="dvm_lake_timeline.html">
-          <span class="num">02</span>
-          <span><span class="name">Lake Through Time</span>
-          <span class="desc">Plays more than four decades of Trout Lake field data, 1981 to 2025, one week per day-night cycle. In winter the ice comes in on the real dates. A slider lets you go back to any month.</span></span>
-        </a></li>
-        <li><a href="dvm_lake_sound.html">
-          <span class="num">03</span>
-          <span><span class="name">Lake in Sound</span>
-          <span class="desc">The same decades played on piano. Each note is one Daphnia: shallower sounds higher, larger sounds louder, and more Daphnia means more notes. Jazz-voiced C major 13 by day drifts to F major 13 at night, and the piano is muffled under ice. Turn your sound on.</span></span>
-        </a></li>
-      </ol>
-    </details>
+<div class="behind" aria-hidden="true"></div>
 
-    <details>
-      <summary>Context <span class="hint">how it works &amp; where the data come from</span></summary>
-      <ol>
-        <li><a href="context.html"><span class="name">Explanation</span></a></li>
-        <li><a href="calculations.html"><span class="name">The Calculations</span></a></li>
-        <li><a href="sources.html"><span class="name">Sources</span></a></li>
-      </ol>
-    </details>
-  </div>
-</main>
-  <div class="hoods-container">
-      <img src=images/1.png class="hood1">
-     <img src=images/2.png class="hood2">
-   <img src=images/3.png class="hood3">
-   <img src=images/4.png class="hood4">
-   <img src=images/5.png class="hood5">
-   <img src=images/6.png class="hood6">
+<div class="front">
+  <main>
+    <h1>Zooplankton Diel Vertical Migration</h1>
+    <p class="lede">Each night Daphnia rise toward the surface to feed, and each morning they sink to hide from fish in the dark. These drawings run a dynamic fitness model of that daily migration for Trout Lake, Wisconsin.</p>
+
+    <div class="menus">
+      <details>
+        <summary>Drawings</summary>
+        <ol>
+          <li><a href="dvm_lake_live_data.html">
+            <span class="num">01</span>
+            <span><span class="name">Live Buoy Data</span>
+            <span class="desc">Driven by real-time temperature and light readings from the Trout Lake buoy, updated every few minutes.</span></span>
+          </a></li>
+          <li><a href="dvm_lake_timeline.html">
+            <span class="num">02</span>
+            <span><span class="name">Lake Through Time</span>
+            <span class="desc">Plays more than four decades of Trout Lake field data, 1981 to 2025, one week per day-night cycle. In winter the ice comes in on the real dates. A slider lets you go back to any month.</span></span>
+          </a></li>
+          <li><a href="dvm_lake_sound.html">
+            <span class="num">03</span>
+            <span><span class="name">Lake in Sound</span>
+            <span class="desc">The same decades played on piano. Each note is one Daphnia: shallower sounds higher, larger sounds louder, and more Daphnia means more notes. Jazz-voiced C major 13 by day drifts to F major 13 at night, and the piano is muffled under ice. Turn your sound on.</span></span>
+          </a></li>
+        </ol>
+      </details>
+
+      <details>
+        <summary>Context <span class="hint">how it works &amp; where the data come from</span></summary>
+        <ol>
+          <li><a href="context.html"><span class="name">Explanation</span></a></li>
+          <li><a href="calculations.html"><span class="name">The Calculations</span></a></li>
+          <li><a href="sources.html"><span class="name">Sources</span></a></li>
+        </ol>
+      </details>
     </div>
- </div>
-</body>
-  <script>
-  const front = document.querySelector('.front');
-  let mx = -999, my = -999;
+  </main>
 
-  function update() {
-    const r = front.getBoundingClientRect();
-    front.style.setProperty('--x', (mx - r.left) + 'px');
-    front.style.setProperty('--y', (my - r.top) + 'px');
+  <div class="hoods-container">
+    <img src="helmets/1.png" class="hood1" alt="">
+    <img src="helmets/2.png" class="hood2" alt="">
+    <img src="helmets/3.png" class="hood3" alt="">
+    <img src="helmets/4.png" class="hood4" alt="">
+    <img src="helmets/5.png" class="hood5" alt="">
+    <img src="helmets/6.png" class="hood6" alt="">
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* ================= settings to play with ================= */
+  const IMAGE_COUNT  = 12;        // images/1.png … 12.png
+  const DENSITY      = 22000;     // lower = more critters (screen area per critter)
+  const MIN_SIZE     = 18;        // px
+  const MAX_SIZE     = 110;       // px
+  const HOLE_RADIUS  = 90;        // px, full-size peek circle
+  const SHRINK_DIST  = 220;       // px from the text area where the circle starts shrinking
+  /* ========================================================= */
+
+  const behind   = document.querySelector('.behind');
+  const front    = document.querySelector('.front');
+  const textArea = document.querySelector('main');
+  const html     = document.documentElement;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = innerWidth, H = innerHeight;
+  addEventListener('resize', () => { W = innerWidth; H = innerHeight; });
+
+  /* ---------- make the culture ---------- */
+  const count = Math.max(24, Math.min(90, Math.round(W * H / DENSITY)));
+  const critters = [];
+
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('img');
+    el.src = `images/${(i % IMAGE_COUNT) + 1}.png`;
+    el.alt = '';
+    el.className = 'critter';
+
+    // mostly small, a few big ones
+    const size = MIN_SIZE + Math.pow(Math.random(), 2.2) * (MAX_SIZE - MIN_SIZE);
+    el.style.width = size + 'px';
+    el.style.opacity = (0.45 + Math.random() * 0.55).toFixed(2);  // depth of field
+    behind.appendChild(el);
+
+    critters.push({
+      el, size,
+      x: Math.random() * W,
+      y: Math.random() * H,
+      heading: Math.random() * Math.PI * 2,   // direction of travel
+      turn: 0,                                // current turning rate
+      speed: (6 + Math.random() * 26) * (60 / (size + 30)),  // small ones zip, big ones drift
+      hopRate: 0.5 + Math.random() * 1.6,     // how often it does a burst stroke
+      phase: Math.random() * 100,
+      spin: (Math.random() - 0.5) * 30,       // slow tumble, deg/sec
+      tilt: Math.random() * 360
+    });
   }
 
-  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; update(); });
-  addEventListener('scroll', update);   // keeps the hole under the cursor while scrolling
-  document.documentElement.addEventListener('pointerleave', () => { mx = my = -999; update(); });
+  /* ---------- mouse tracking ---------- */
+  let mx = -9999, my = -9999, mouseIn = false;
+  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; mouseIn = true; });
+  html.addEventListener('pointerleave', () => { mouseIn = false; });
+
+  let r = 0;  // current hole radius (eased)
+
+  /* ---------- animation loop ---------- */
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    const t = now / 1000;
+
+    // swim
+    if (!reduceMotion) {
+      for (const c of critters) {
+        // wandering: turning rate drifts randomly
+        c.turn += (Math.random() - 0.5) * 3 * dt;
+        c.turn = Math.max(-1.2, Math.min(1.2, c.turn * 0.985));
+        c.heading += c.turn * dt;
+
+        // jerky daphnia-style strokes: mostly gliding, then a quick burst
+        const burst = 0.35 + 2 * Math.pow(Math.max(0, Math.sin(t * c.hopRate * Math.PI + c.phase)), 6);
+        const v = c.speed * burst;
+        c.x += Math.cos(c.heading) * v * dt;
+        c.y += Math.sin(c.heading) * v * dt;
+
+        // wrap around the edges
+        const m = c.size;
+        if (c.x < -m) c.x = W + m; else if (c.x > W + m) c.x = -m;
+        if (c.y < -m) c.y = H + m; else if (c.y > H + m) c.y = -m;
+
+        c.tilt += c.spin * dt;
+        const deg = c.heading * 180 / Math.PI + c.tilt;
+        c.el.style.transform =
+          `translate(${(c.x - c.size / 2).toFixed(1)}px, ${(c.y - c.size / 2).toFixed(1)}px) rotate(${deg.toFixed(1)}deg)`;
+      }
+    } else if (!frame.placed) {
+      for (const c of critters) {
+        c.el.style.transform = `translate(${c.x}px, ${c.y}px) rotate(${c.tilt}deg)`;
+      }
+      frame.placed = true;
+    }
+
+    // peek circle: shrink as the mouse nears the text area, gone on top of it
+    let target = 0;
+    if (mouseIn) {
+      const b = textArea.getBoundingClientRect();
+      const dx = Math.max(b.left - mx, 0, mx - b.right);
+      const dy = Math.max(b.top - my, 0, my - b.bottom);
+      const dist = Math.hypot(dx, dy);           // 0 when over the text
+      target = HOLE_RADIUS * Math.min(1, dist / SHRINK_DIST);
+    }
+    r += (target - r) * Math.min(1, dt * 12);    // smooth easing
+
+    const f = front.getBoundingClientRect();
+    front.style.setProperty('--x', (mx - f.left) + 'px');
+    front.style.setProperty('--y', (my - f.top) + 'px');
+    front.style.setProperty('--r', r.toFixed(1) + 'px');
+
+    // hide the arrow while the circle is big enough to act as the cursor
+    html.classList.toggle('peeking', r > 20);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+});
 </script>
+</body>
 </html>
