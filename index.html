@@ -22,13 +22,13 @@
   height: auto;
  bottom:100px;
  right:20px;
- animation: boop1 30s infinite;
+ animation: boop1 30s forwards;
 }
  .hood2 {
   right:80px;
   height: auto;
   bottom:100px;
-  animation: boop2 5s infinite, boop1 30s infinite;
+  animation: boop2 5s infinite, boop1 30s forwards;
   animation-delay: 0s, 30s;
 }
  .hood3 {
@@ -60,7 +60,7 @@
    transform: translateY(0px);
   }
   100%{
-   transform: translateY(-700px);
+   transform: translateY(-500px);
   }
  }
    @keyframes boop2{
