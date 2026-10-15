@@ -102,7 +102,24 @@
    transform: translateX(1px);
   }
   }
-  
+  .behind {
+  position: fixed;
+  inset: 0;            /* fills the whole screen */
+  z-index: 0;
+  overflow: hidden;
+   background-color: black;
+}
+
+.front {
+  --x: -999px;         /* start the hole off-screen */
+  --y: -999px;
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  background: var(--bg);   /* must be solid, or you'll see through everywhere */
+  -webkit-mask-image: radial-gradient(circle 80px at var(--x) var(--y), transparent 90%, #000 100%);
+          mask-image: radial-gradient(circle 80px at var(--x) var(--y), transparent 90%, #000 100%);
+}
  }
   :root {
     --bg: #FFFFFF;
@@ -147,6 +164,20 @@
   .name { font-size: 20px; font-weight: 600; display: block; }
   .desc { color: var(--muted); font-size: 14.5px; display: block; margin: 2px auto 0; max-width: 560px; }
 </style>
+ <script>
+  const front = document.querySelector('.front');
+  let mx = -999, my = -999;
+
+  function update() {
+    const r = front.getBoundingClientRect();
+    front.style.setProperty('--x', (mx - r.left) + 'px');
+    front.style.setProperty('--y', (my - r.top) + 'px');
+  }
+
+  addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; update(); });
+  addEventListener('scroll', update);   // keeps the hole under the cursor while scrolling
+  document.documentElement.addEventListener('pointerleave', () => { mx = my = -999; update(); });
+</script>
 </head>
 <body>
  <div class="behind"></div>
