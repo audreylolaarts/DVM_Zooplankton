@@ -17,45 +17,86 @@
   width:90px;
   display: block;
   height: auto;
-  animation: boop 1s infinite;
 }
 .hood1 {
   height: auto;
  bottom:100px;
  right:20px;
+ animation: boop1 0.4s infinite;
 }
  .hood2 {
   right:80px;
   height: auto;
   bottom:100px;
+  animation: boop2 0.2s infinite;
 }
  .hood3 {
   right:40px;
   bottom:30px;
   height: auto;
+  animation: boop3 1s infinite;
 }
  .hood4 {
   right:150px;
   bottom:30px;
   height: auto;
+  animation: boop4 0.2s infinite;
 }
  .hood5 {
   right:90px;
   bottom:40px;
   height: auto;
+  animation: boop5 0.8s infinite;
 }
  .hood6 {
   right:160px;
   bottom:110px;
   height: auto;
+  animation: boop6 1s infinite;
 }
- @keyframes boop{
+ @keyframes boop1{
   0%{
    transform: translateY(-3px);
   }
   100%{
    transform: translateY(3px);
   }
+   @keyframes boop2{
+  0%{
+   transform: translateX(-3px);
+  }
+  100%{
+   transform: translateX(3px);
+  }
+  @keyframes boop3{
+  0%{
+   transform: translateX(-6px);
+  }
+  100%{
+   transform: translateX(6px);
+  }
+    @keyframes boop4{
+  0%{
+   transform: translateY(-6px);
+  }
+  100%{
+   transform: translateY(6px);
+  }
+  @keyframes boop5{
+  0%{
+   transform: translateX(-1px);
+  }
+  100%{
+   transform: translateY(1px);
+  }
+  @keyframes boop6{
+  0%{
+   transform: translateY(-1px);
+  }
+  100%{
+   transform: translateY(1px);
+  }
+  
  }
   :root {
     --bg: #FFFFFF;
