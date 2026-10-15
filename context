@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explanation · Zooplankton Diel Vertical Migration</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --ink: #000000;
+    --muted: #555555;
+    --line: rgba(191, 227, 255, 0.18);
+    --accent: #bfe3ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 56px 20px 72px; }
+  .back { color: var(--muted); text-decoration: none; font-size: 15px; font-style: italic; }
+  .back:hover, .back:focus-visible { color: var(--accent); text-decoration: underline; }
+  h1 { font-weight: 600; font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 22px 0 10px; letter-spacing: -0.01em; }
+  /* links stay black and underlined so they read on white; accent on hover */
+  a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+  a:hover, a:focus-visible { color: var(--accent); }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 15px; color: var(--muted); }
+  .lede { margin: 0 0 12px; font-size: 19px; font-style: italic; }
+  nav.toc { margin: 24px 0 8px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 15px; }
+  nav.toc a { color: var(--muted); }
+  h2 { font-size: 26px; font-weight: 600; margin: 52px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+  h3 { font-size: 19px; font-weight: 600; font-style: italic; margin: 24px 0 4px; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  .muted { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 18px; font-size: 16px; }
+  th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+  .tablewrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← Zooplankton Diel Vertical Migration</a>
+  <h1>Explanation</h1>
+  <p class="lede">How the drawings decide where Trout Lake's Daphnia are, and how forty years of field data become dots of light and notes on a piano.</p>
+  <nav class="toc" aria-label="On this page">
+    <a href="#dvm">The migration</a>
+    <a href="#model">The model</a>
+    <a href="#drawings">The drawings</a>
+    <a href="#sound">The harmony</a>
+    <a href="#ice">Under the ice</a>
+    <a href="#limits">Limitations</a>
+  </nav>
+
+  <h2 id="dvm">The migration</h2>
+  <p>Daphnia are water fleas, small crustaceans a millimeter or two long that filter algae from the water. They are a main food of cisco and other small fish, which hunt by sight. Near the surface there is more food but more light, so fish can see them. In deep, dark water they are safer but hungrier.</p>
+  <p>Many Daphnia solve this by moving every day. They sink into the dark at dawn and rise to feed at dusk. This daily journey, diel vertical migration, is one of the largest regular movements of animals on Earth, and it happens in Trout Lake every day of open water.</p>
+
+  <h2 id="model">The model</h2>
+  <p>The drawings run DaphniaDVM, a model by Bennett McAfee (Lawrence University, 2021) that grew out of work begun by Bart De Stasio in 1993. For each 2 m layer of the lake from the surface to 32 m, and each Daphnia size from 5 to 60 μg, it weighs the risk of being eaten against the energy to be gained. It then sends each size to the layer where its chances of surviving the next six hours are best.</p>
+
+  <h3>What it weighs</h3>
+  <ul>
+    <li><strong>Light.</strong> Sunlight fades with depth. The more light, the farther a fish can see.</li>
+    <li><strong>Fish.</strong> How many zooplankton-eating fish are in each layer, measured as fish per 1,000 m³ of water.</li>
+    <li><strong>Body size.</strong> Bigger Daphnia are seen from farther away, burn more energy and eat more.</li>
+    <li><strong>Water temperature.</strong> Warm water speeds up metabolism, so Daphnia burn energy faster.</li>
+    <li><strong>Chlorophyll.</strong> A measure of algae, the Daphnia's food.</li>
+    <li><strong>Starvation.</strong> A Daphnia that shrinks below 5 μg dies.</li>
+  </ul>
+  <p>Each size class lands at one best depth. As in McAfee's method, the drawings then spread each class around that depth in a bell curve, with a standard deviation of 3.84 m. Real populations are spread out rather than stacked in single layers.</p>
+
+  <h3>Where each input comes from</h3>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Input</th><th>Live Buoy Data</th><th>Lake Through Time · Lake in Sound</th></tr></thead>
+    <tbody>
+      <tr><td>Light</td><td>Estimated from the sun's position (the buoy's light sensor is not reporting)</td><td>Hourly measurements from Woodruff Airport, estimated before 1989</td></tr>
+      <tr><td>Temperature</td><td>The buoy's 25 sensors, 0–30 m</td><td>Field profiles, week by week</td></tr>
+      <tr><td>Chlorophyll</td><td>Typical profile for the current month</td><td>Field profiles, week by week</td></tr>
+      <tr><td>Fish</td><td>Average of the 2020–2024 sonar surveys</td><td>That year's sonar survey; the May 1992 profile before 2001</td></tr>
+      <tr><td>Number of Daphnia</td><td>Typical for the current month</td><td>Field counts, week by week</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="muted">Field samples come every two to five weeks. In between, the timeline blends the samples on either side, or uses the typical value for that time of year when the gap is long. The readout on screen says which.</p>
+
+  <h2 id="drawings">The drawings</h2>
+  <h3>Live Buoy Data</h3>
+  <p>The lake as it is now. A buoy anchored on Trout Lake records water temperature every minute, and the drawing re-runs the model whenever a new reading arrives. Day and night follow the real sky over the lake.</p>
+  <h3>Lake Through Time</h3>
+  <p>Trout Lake from 1981 to 2025, one week at a time, each week played as a single day and night. Temperature, food, fish, sunlight, wind and ice all come from the field record for that week. The slider jumps to any month.</p>
+  <h3>Lake in Sound</h3>
+  <p>The same timeline played on piano. Every note is one Daphnia:</p>
+  <ul>
+    <li><strong>More Daphnia, more notes.</strong> A crowded July is busy; winter is sparse.</li>
+    <li><strong>Larger Daphnia, louder notes.</strong></li>
+    <li><strong>Shallower Daphnia, higher notes.</strong> Each 2 m of water is one note, from C6 at the surface down to C2 at 32 m.</li>
+  </ul>
+
+  <h3>Scale</h3>
+  <p>Each dot stands for about 1.2 billion Daphnia. In a typical October, Trout Lake holds around 3.4 Daphnia per liter, or some 800 billion in the whole lake. The June peak is about twice that.</p>
+
+  <h2 id="sound">The harmony</h2>
+  <p>Every note belongs to a jazz-voiced major 13 chord. Roots and fifths sit low, in the deep water; 7ths, 9ths and 13ths sit higher, near the surface. By day the chord is C major 13 (C E G B D A). As the light fades, notes drift toward F major 13 (F A C E G D), the nearest related major key. The two chords share five notes, so nightfall sounds like a warm settling rather than a turn to sadness. Because light comes from real measurements, a storm-dark afternoon leans toward the evening chord too.</p>
+
+  <h2 id="ice">Under the ice</h2>
+  <p>Trout Lake is frozen for about four months a year. The model was built for open water, so it is paused while there's ice. On the real ice-on date the surface freezes over in the drawing and the piano becomes muffled. The Daphnia gather just below the ice, 2–8 m down, and drift slowly without migrating.</p>
+  <p>That placement is an interpretation, not a model result. Under the ice, the field data show the algae concentrated just below the surface. Snow-covered ice blocks most light, and fish feed slowly in near-freezing water, so there is little reason to dive. The number of Daphnia still follows the winter counts, which are very low.</p>
+
+  <h2 id="limits">Limitations</h2>
+  <h3>The model</h3>
+  <ul>
+    <li>It includes only fish that hunt by sight. Opossum shrimp (<em>Mysis</em>), which hunt Daphnia in Trout Lake's deep, dark water, are not included. That is likely why the model sends some Daphnia to the bottom, where few fish live.</li>
+    <li>Some settings are fixed rather than measured: the light extinction coefficient (0.48), the chance of finding food (0.5) and the darkest night light.</li>
+    <li>It is built for <em>Daphnia pulex</em>, while Trout Lake has several Daphnia species.</li>
+    <li>It does not include oxygen, moonlight, UV light, fish chemical cues, food quality, or growth from day to day.</li>
+  </ul>
+  <h3>The data</h3>
+  <ul>
+    <li>Fish are surveyed by sonar on one midsummer night a year, in the south basin only, and the sonar cannot see the top meter of water. There are no surveys between 1992 and 2001.</li>
+    <li>Many weeks between field samples are filled in, especially Daphnia counts in the 1990s.</li>
+    <li>Light before 1989, and on the live page, is a clear-sky estimate, so it overestimates light on cloudy days.</li>
+    <li>The field counts are whole-lake averages. No public dataset yet records where in the water column the Daphnia actually were, so the model's depths can't be checked against the record.</li>
+  </ul>
+  <h3>The drawings</h3>
+  <ul>
+    <li>Dots and notes are a sample, not a one-to-one count. Each size class gets at least a few dots so the larger animals stay visible.</li>
+    <li>A week is shown as one representative day.</li>
+    <li>The live page runs about 10 minutes or more behind the buoy.</li>
+    <li>The sound mapping is an artistic choice, not a measurement.</li>
+  </ul>
+
+  <footer>Made during the 2026 Drawing Water residency at Trout Lake Station. Full citations are on the <a href="sources.html">sources</a> page.</footer>
+</main>
+</body>
+</html>
