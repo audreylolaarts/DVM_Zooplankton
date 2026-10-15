@@ -22,6 +22,7 @@
   height: auto;
  bottom:100px;
  right:20px;
+ animation: boop 1s infitite;
 }
  .hood2 {
   right:80px;
@@ -48,6 +49,14 @@
   bottom:110px;
   height: auto;
 }
+ @keyframes boop{
+  0%{
+   translateX(-1%);
+  }
+  100%{
+   translateX(1%);
+  }
+ }
   :root {
     --bg: #FFFFFF;
     --ink: #000000;
