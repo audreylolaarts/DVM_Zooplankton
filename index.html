@@ -17,6 +17,7 @@
   width:90px;
   display: block;
   height: auto;
+  animation: rise 30s alternate;
 }
 .hood1 {
   height: auto;
@@ -28,15 +29,13 @@
   right:80px;
   height: auto;
   bottom:100px;
-  animation: boop2 5s infinite, boop1 30s forwards;
-  animation-delay: 0s, 10s;
+  animation: boop2 5s infinite;
 }
  .hood3 {
   right:40px;
   bottom:30px;
   height: auto;
-  animation: boop3 1s infinite, boop1 15s fowards;
-  animation-dela:0s, 5s;
+  animation: boop3 1s infinite;
 }
  .hood4 {
   right:150px;
@@ -56,12 +55,17 @@
   height: auto;
   animation: boop6 1s infinite;
 }
+ @keyframes rise{
+  100%{
+   transform: translateY(-400px);
+  }
+ }
  @keyframes boop1{
   0%{
-   transform: translateY(0px);
+   transform: translateY(-2px);
   }
   100%{
-   transform: translateY(-500px);
+   transform: translateY(2px);
   }
  }
    @keyframes boop2{
@@ -74,18 +78,18 @@
    }
   @keyframes boop3{
   0%{
-   transform: translateY(-6px);
+   transform: translateY(-1px);
   }
   100%{
-   transform: translateY(6px);
+   transform: translateY(1px);
   }
   }
     @keyframes boop4{
   0%{
-   transform: translateY(-6px);
+   transform: translateY(-1px);
   }
   100%{
-   transform: translateY(6px);
+   transform: translateY(1px);
   }
     }
   @keyframes boop5{
